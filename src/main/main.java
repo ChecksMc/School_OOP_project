@@ -9,18 +9,11 @@ public class main {
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(1200, 700);
             frame.setLocationRelativeTo(null);
-            
-            // Create tabbed pane for different modes
             JTabbedPane tabbedPane = new JTabbedPane();
-            
-            // Add visualizer tab
             visualizer visualizerPanel = new visualizer();
             tabbedPane.addTab("Visualizer", visualizerPanel);
-            
-            // Add comparer tab
             comparer comparerPanel = new comparer();
             tabbedPane.addTab("Comparer", comparerPanel);
-            
             frame.add(tabbedPane);
             frame.setVisible(true);
         });
