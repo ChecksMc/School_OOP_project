@@ -11,7 +11,8 @@ import dataclass.sort_array;
 import sorter.*;
 
 public class comparer extends JPanel {
-    private static final int UI_SCALE = 4;
+    // Reduced from 4 to keep comparer mode usable on typical laptop screens.
+    private static final int UI_SCALE = 2;
     private static final String[] ALGORITHMS = {
         "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort"
     };
@@ -50,13 +51,14 @@ public class comparer extends JPanel {
     public comparer() {
         setLayout(new BorderLayout(s(10), s(10)));
         setBorder(BorderFactory.createEmptyBorder(s(10), s(10), s(10), s(10)));
+        setMinimumSize(new Dimension(0, 0));
 
         JPanel topPanel = new JPanel(new BorderLayout(s(8), s(8)));
 
         JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, s(6), s(3)));
         JLabel inputLabel = new JLabel("Array (comma-separated):");
         inputLabel.setFont(new Font("SansSerif", Font.BOLD, f(12)));
-        inputField = new JTextField("5,3,8,1,9,2,7,4,6,10", 25);
+        inputField = new JTextField("5,3,8,1,9,2,7,4,6,10", 16);
         inputField.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
 
         JLabel sizeLabel = new JLabel("Random Size:");
@@ -161,7 +163,7 @@ public class comparer extends JPanel {
 
     private JPanel createAlgorithmSelectionPanel() {
         JPanel shell = new JPanel(new BorderLayout(s(4), s(4)));
-        shell.setPreferredSize(new Dimension(s(130), s(230)));
+        shell.setPreferredSize(new Dimension(Math.min(s(130), 320), s(230)));
 
         JLabel title = new JLabel("Algorithm Selection");
         title.setFont(new Font("SansSerif", Font.BOLD, f(14)));

@@ -37,7 +37,20 @@ public class main {
             JTabbedPane tabbedPane = new JTabbedPane();
             tabbedPane.setFont(new Font("SansSerif", Font.BOLD, s(4)));
             tabbedPane.addTab("Visualizer", new visualizer());
-            tabbedPane.addTab("Comparer", new comparer());
+
+            try {
+                tabbedPane.addTab("Comparer", new comparer());
+            } catch (Throwable t) {
+                JPanel errorPanel = new JPanel(new BorderLayout());
+                JTextArea errorText = new JTextArea(
+                    "Comparer mode failed to initialize.\n\n" +
+                    t.getClass().getSimpleName() + ": " + t.getMessage()
+                );
+                errorText.setEditable(false);
+                errorText.setFont(new Font("Monospaced", Font.PLAIN, 14));
+                errorPanel.add(new JScrollPane(errorText), BorderLayout.CENTER);
+                tabbedPane.addTab("Comparer", errorPanel);
+            }
 
             frame.add(tabbedPane);
             frame.setVisible(true);
