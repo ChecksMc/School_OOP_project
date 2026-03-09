@@ -1,10 +1,11 @@
+package sorter;
 import dataclass.sort_array;
 
-abstract class solver
+public abstract class sorter
 {
-	sort_array arr;
+    sort_array arr;
     
-    public solver(sort_array arr)
+    public sorter(sort_array arr)
     {
         this.arr = arr;
     }
