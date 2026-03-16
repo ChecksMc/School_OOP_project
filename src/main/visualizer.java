@@ -57,6 +57,14 @@ public class visualizer extends JPanel {
         topPanel.add(createModePanel(), BorderLayout.SOUTH);
         add(topPanel, BorderLayout.NORTH);
 
+        // Code viewer on the right for line-by-line stepping (initialize early so selection panel can update it)
+        codeArea = new JTextArea();
+        codeArea.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+        codeArea.setEditable(false);
+        codeArea.setBorder(BorderFactory.createEmptyBorder(s(6), s(6), s(6), s(6)));
+        JScrollPane codeScroll = new JScrollPane(codeArea);
+        codeScroll.setPreferredSize(new Dimension(s(300), s(220)));
+
         add(createAlgorithmSelectionPanel(), BorderLayout.WEST);
 
         visualPanel = new JPanel() {
@@ -70,13 +78,6 @@ public class visualizer extends JPanel {
         visualPanel.setBorder(BorderFactory.createLineBorder(new Color(45, 45, 45), s(1)));
         add(visualPanel, BorderLayout.CENTER);
 
-        // Code viewer on the right for line-by-line stepping
-        codeArea = new JTextArea();
-        codeArea.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
-        codeArea.setEditable(false);
-        codeArea.setBorder(BorderFactory.createEmptyBorder(s(6), s(6), s(6), s(6)));
-        JScrollPane codeScroll = new JScrollPane(codeArea);
-        codeScroll.setPreferredSize(new Dimension(s(300), s(220)));
         add(codeScroll, BorderLayout.EAST);
 
         statusLabel = new JLabel("Enter an array, pick an algorithm card, then sort.");
