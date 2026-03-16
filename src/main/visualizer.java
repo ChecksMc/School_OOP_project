@@ -1,6 +1,7 @@
 package main;
 
 import javax.swing.*;
+import javax.swing.text.BadLocationException;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -17,6 +18,7 @@ public class visualizer extends JPanel {
 
     private JTextField inputField;
     private JButton instantButton, stepButton, resetButton, nextButton, playButton;
+    private JButton stepIntoButton, stepOverButton, stepOutButton;
     private final Map<String, JToggleButton> algorithmButtons = new LinkedHashMap<>();
     private JPanel visualPanel;
     private JLabel statusLabel;
@@ -26,7 +28,17 @@ public class visualizer extends JPanel {
     private int[] currentArray;
     private int stepIndex = 0;
     private List<int[]> sortSteps;
+    private List<String> codeLines;
+    private List<Integer> codeLineIndices;
+    private List<Integer> codeDepths;
+    private JTextArea codeArea;
     private Timer playTimer;
+
+    private static class TreeNode {
+        int val;
+        TreeNode left, right;
+        TreeNode(int v) { val = v; }
+    }
 
     private static int s(int base) {
         return Math.max(1, base * UI_SCALE);
@@ -57,6 +69,15 @@ public class visualizer extends JPanel {
         visualPanel.setBackground(Color.WHITE);
         visualPanel.setBorder(BorderFactory.createLineBorder(new Color(45, 45, 45), s(1)));
         add(visualPanel, BorderLayout.CENTER);
+
+        // Code viewer on the right for line-by-line stepping
+        codeArea = new JTextArea();
+        codeArea.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+        codeArea.setEditable(false);
+        codeArea.setBorder(BorderFactory.createEmptyBorder(s(6), s(6), s(6), s(6)));
+        JScrollPane codeScroll = new JScrollPane(codeArea);
+        codeScroll.setPreferredSize(new Dimension(s(300), s(220)));
+        add(codeScroll, BorderLayout.EAST);
 
         statusLabel = new JLabel("Enter an array, pick an algorithm card, then sort.");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, f(14)));
@@ -92,26 +113,41 @@ public class visualizer extends JPanel {
         stepButton = new JButton("Step Mode");
         resetButton = new JButton("Reset");
         nextButton = new JButton("Next Step");
+        stepIntoButton = new JButton("Step Into");
+        stepOverButton = new JButton("Step Over");
+        stepOutButton = new JButton("Step Out");
         playButton = new JButton("Play");
 
         styleActionButton(instantButton, new Color(45, 124, 246));
         styleActionButton(stepButton, new Color(0, 144, 115));
         styleActionButton(nextButton, new Color(238, 149, 0));
         styleActionButton(playButton, new Color(157, 95, 255));
+        styleActionButton(stepIntoButton, new Color(34, 139, 34));
+        styleActionButton(stepOverButton, new Color(85, 107, 47));
+        styleActionButton(stepOutButton, new Color(184, 134, 11));
         styleActionButton(resetButton, new Color(189, 44, 44));
 
         nextButton.setEnabled(false);
+        stepIntoButton.setEnabled(false);
+        stepOverButton.setEnabled(false);
+        stepOutButton.setEnabled(false);
         playButton.setEnabled(false);
 
         modePanel.add(instantButton);
         modePanel.add(stepButton);
         modePanel.add(nextButton);
+        modePanel.add(stepIntoButton);
+        modePanel.add(stepOverButton);
+        modePanel.add(stepOutButton);
         modePanel.add(playButton);
         modePanel.add(resetButton);
 
         instantButton.addActionListener(e -> instantSort());
         stepButton.addActionListener(e -> startStepMode());
         nextButton.addActionListener(e -> nextStep());
+        stepIntoButton.addActionListener(e -> stepInto());
+        stepOverButton.addActionListener(e -> stepOver());
+        stepOutButton.addActionListener(e -> stepOut());
         playButton.addActionListener(e -> togglePlay());
         resetButton.addActionListener(e -> reset());
 
@@ -140,6 +176,7 @@ public class visualizer extends JPanel {
             defaultButton.setSelected(true);
         }
         updateAlgorithmCardStyles();
+        updateCodeArea();
 
         shell.add(title, BorderLayout.NORTH);
         shell.add(cardPanel, BorderLayout.CENTER);
@@ -156,6 +193,7 @@ public class visualizer extends JPanel {
         card.addActionListener(e -> {
             selectedAlgorithm = algorithm;
             updateAlgorithmCardStyles();
+            updateCodeArea();
         });
 
         group.add(card);
@@ -199,6 +237,7 @@ public class visualizer extends JPanel {
         nextButton.setEnabled(false);
         playButton.setEnabled(false);
         stopPlay();
+        codeArea.select(0, 0);
         visualPanel.repaint();
     }
 
@@ -218,9 +257,16 @@ public class visualizer extends JPanel {
         statusLabel.setText("Step 1 of " + sortSteps.size() + " - " + selectedAlgorithm);
 
         nextButton.setEnabled(true);
+        stepIntoButton.setEnabled(true);
+        stepOverButton.setEnabled(true);
+        stepOutButton.setEnabled(true);
         playButton.setEnabled(true);
         playButton.setText("Play");
         stopPlay();
+        updateCodeArea();
+        if (codeLineIndices != null && !codeLineIndices.isEmpty()) {
+            highlightCodeLine(codeLineIndices.get(0));
+        }
         visualPanel.repaint();
     }
 
@@ -231,12 +277,95 @@ public class visualizer extends JPanel {
 
         stepIndex++;
         currentArray = sortSteps.get(stepIndex).clone();
+        if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
+            highlightCodeLine(codeLineIndices.get(stepIndex));
+        }
         statusLabel.setText("Step " + (stepIndex + 1) + " of " + sortSteps.size() + " - " + selectedAlgorithm);
         visualPanel.repaint();
 
         if (stepIndex >= sortSteps.size() - 1) {
             stopPlay();
             nextButton.setEnabled(false);
+            statusLabel.setText("Sorting complete! Final array is shown.");
+        }
+    }
+
+    private void stepInto() {
+        nextStep();
+    }
+
+    private void stepOver() {
+        if (sortSteps == null || stepIndex >= sortSteps.size() - 1) return;
+        if (codeDepths == null || codeDepths.size() <= stepIndex) {
+            nextStep();
+            return;
+        }
+
+        int currentDepth = codeDepths.get(stepIndex);
+        int j = stepIndex + 1;
+        // if next step is not a deeper call just advance one
+        if (j < codeDepths.size() && codeDepths.get(j) <= currentDepth) {
+            nextStep();
+            return;
+        }
+
+        // skip over deeper frames until we return to same-or-less depth
+        while (j < codeDepths.size() && codeDepths.get(j) > currentDepth) {
+            j++;
+        }
+
+        if (j >= sortSteps.size()) j = sortSteps.size() - 1;
+        stepIndex = j;
+        currentArray = sortSteps.get(stepIndex).clone();
+        if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
+            highlightCodeLine(codeLineIndices.get(stepIndex));
+        }
+        statusLabel.setText("Step " + (stepIndex + 1) + " of " + sortSteps.size() + " - " + selectedAlgorithm);
+        visualPanel.repaint();
+        if (stepIndex >= sortSteps.size() - 1) {
+            stopPlay();
+            nextButton.setEnabled(false);
+            stepIntoButton.setEnabled(false);
+            stepOverButton.setEnabled(false);
+            stepOutButton.setEnabled(false);
+            statusLabel.setText("Sorting complete! Final array is shown.");
+        }
+    }
+
+    private void stepOut() {
+        if (sortSteps == null || stepIndex >= sortSteps.size() - 1) return;
+        if (codeDepths == null || codeDepths.size() <= stepIndex) {
+            nextStep();
+            return;
+        }
+
+        int currentDepth = codeDepths.get(stepIndex);
+        if (currentDepth <= 0) {
+            // nothing to step out to
+            nextStep();
+            return;
+        }
+
+        int j = stepIndex + 1;
+        while (j < codeDepths.size() && codeDepths.get(j) >= currentDepth) {
+            j++;
+        }
+        if (j >= sortSteps.size()) j = sortSteps.size() - 1;
+
+        stepIndex = j;
+        currentArray = sortSteps.get(stepIndex).clone();
+        if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
+            highlightCodeLine(codeLineIndices.get(stepIndex));
+        }
+        statusLabel.setText("Step " + (stepIndex + 1) + " of " + sortSteps.size() + " - " + selectedAlgorithm);
+        visualPanel.repaint();
+
+        if (stepIndex >= sortSteps.size() - 1) {
+            stopPlay();
+            nextButton.setEnabled(false);
+            stepIntoButton.setEnabled(false);
+            stepOverButton.setEnabled(false);
+            stepOutButton.setEnabled(false);
             statusLabel.setText("Sorting complete! Final array is shown.");
         }
     }
@@ -259,12 +388,19 @@ public class visualizer extends JPanel {
     private void reset() {
         stepIndex = 0;
         sortSteps = null;
+        codeLines = null;
+        codeLineIndices = null;
+        codeDepths = null;
         currentArray = originalArray != null ? originalArray.clone() : null;
         nextButton.setEnabled(false);
+        stepIntoButton.setEnabled(false);
+        stepOverButton.setEnabled(false);
+        stepOutButton.setEnabled(false);
         playButton.setEnabled(false);
         playTimer.stop();
         playButton.setText("Play");
         statusLabel.setText("Reset complete. Pick an algorithm and sort again.");
+        codeArea.select(0, 0);
         visualPanel.repaint();
     }
 
@@ -312,8 +448,13 @@ public class visualizer extends JPanel {
 
     private List<int[]> generateSortSteps(String algorithm) {
         List<int[]> steps = new ArrayList<>();
+        codeLines = getCodeLinesForAlgorithm(algorithm);
+        codeLineIndices = new ArrayList<>();
+        codeDepths = new ArrayList<>();
         int[] array = originalArray.clone();
         steps.add(array.clone());
+        codeLineIndices.add(0);
+        codeDepths.add(0);
 
         switch (algorithm) {
             case "Bubble Sort":
@@ -325,10 +466,17 @@ public class visualizer extends JPanel {
             case "Selection Sort":
                 generateSelectionSortSteps(array, steps);
                 break;
+            case "Merge Sort":
+                generateMergeSortSteps(array, steps);
+                break;
+            case "Tree Sort":
+                generateTreeSortSteps(array, steps);
+                break;
             default:
                 sorter s = createSorter(algorithm, array);
                 int[] sorted = s.solve();
                 steps.add(sorted.clone());
+                codeLineIndices.add(0);
         }
 
         return steps;
@@ -337,12 +485,19 @@ public class visualizer extends JPanel {
     private void generateBubbleSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
+            steps.add(array.clone()); codeLineIndices.add(1); codeDepths.add(0);
             for (int j = 0; j < n - i - 1; j++) {
+                steps.add(array.clone()); codeLineIndices.add(2); codeDepths.add(0);
+                // comparison
+                steps.add(array.clone()); codeLineIndices.add(3); codeDepths.add(0);
                 if (array[j] > array[j + 1]) {
+                    // temp line
+                    steps.add(array.clone()); codeLineIndices.add(4); codeDepths.add(0);
                     int temp = array[j];
                     array[j] = array[j + 1];
                     array[j + 1] = temp;
-                    steps.add(array.clone());
+                    // after swap
+                    steps.add(array.clone()); codeLineIndices.add(6); codeDepths.add(0);
                 }
             }
         }
@@ -351,33 +506,215 @@ public class visualizer extends JPanel {
     private void generateInsertionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 1; i < n; i++) {
+            steps.add(array.clone()); codeLineIndices.add(1); codeDepths.add(0);
             int key = array[i];
+            steps.add(array.clone()); codeLineIndices.add(2); codeDepths.add(0);
             int j = i - 1;
+            steps.add(array.clone()); codeLineIndices.add(3); codeDepths.add(0);
             while (j >= 0 && array[j] > key) {
+                steps.add(array.clone()); codeLineIndices.add(4); codeDepths.add(0);
                 array[j + 1] = array[j];
+                steps.add(array.clone()); codeLineIndices.add(5); codeDepths.add(0);
                 j = j - 1;
-                steps.add(array.clone());
+                steps.add(array.clone()); codeLineIndices.add(6); codeDepths.add(0);
             }
             array[j + 1] = key;
-            steps.add(array.clone());
+            steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(0);
         }
     }
 
     private void generateSelectionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
+            steps.add(array.clone()); codeLineIndices.add(1); codeDepths.add(0);
             int minIndex = i;
+            steps.add(array.clone()); codeLineIndices.add(2); codeDepths.add(0);
             for (int j = i + 1; j < n; j++) {
+                steps.add(array.clone()); codeLineIndices.add(3); codeDepths.add(0);
                 if (array[j] < array[minIndex]) {
                     minIndex = j;
+                    steps.add(array.clone()); codeLineIndices.add(5); codeDepths.add(0);
                 }
             }
             if (minIndex != i) {
+                steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(0);
                 int temp = array[i];
                 array[i] = array[minIndex];
                 array[minIndex] = temp;
-                steps.add(array.clone());
+                steps.add(array.clone()); codeLineIndices.add(11); codeDepths.add(0);
             }
+        }
+    }
+
+    private void generateMergeSortSteps(int[] array, List<int[]> steps) {
+        if (array.length <= 1) {
+            steps.add(array.clone()); codeLineIndices.add(0); codeDepths.add(0);
+            return;
+        }
+        mergeSortRec(array, 0, array.length - 1, steps, 0);
+    }
+
+    private void mergeSortRec(int[] array, int left, int right, List<int[]> steps, int depth) {
+        // entry
+        steps.add(array.clone()); codeLineIndices.add(1); codeDepths.add(depth);
+        if (left < right) {
+            int mid = left + (right - left) / 2;
+            // before left recursion
+            steps.add(array.clone()); codeLineIndices.add(3); codeDepths.add(depth);
+            mergeSortRec(array, left, mid, steps, depth + 1);
+            // before right recursion
+            steps.add(array.clone()); codeLineIndices.add(4); codeDepths.add(depth);
+            mergeSortRec(array, mid + 1, right, steps, depth + 1);
+            // merge and record
+            mergeWithRecording(array, left, mid, right, steps, depth);
+            steps.add(array.clone()); codeLineIndices.add(6); codeDepths.add(depth);
+        } else {
+            // base case
+            steps.add(array.clone()); codeLineIndices.add(0); codeDepths.add(depth);
+        }
+    }
+
+    private void mergeWithRecording(int[] array, int left, int mid, int right, List<int[]> steps, int depth) {
+        int n1 = mid - left + 1;
+        int n2 = right - mid;
+        int[] leftArr = new int[n1];
+        int[] rightArr = new int[n2];
+        for (int i = 0; i < n1; i++) leftArr[i] = array[left + i];
+        for (int j = 0; j < n2; j++) rightArr[j] = array[mid + 1 + j];
+
+        int i = 0, j = 0;
+        int k = left;
+        // record merge start
+        steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(depth);
+        while (i < n1 && j < n2) {
+            if (leftArr[i] <= rightArr[j]) {
+                array[k] = leftArr[i++];
+            } else {
+                array[k] = rightArr[j++];
+            }
+            k++;
+            steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(depth);
+        }
+        while (i < n1) {
+            array[k++] = leftArr[i++];
+            steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(depth);
+        }
+        while (j < n2) {
+            array[k++] = rightArr[j++];
+            steps.add(array.clone()); codeLineIndices.add(8); codeDepths.add(depth);
+        }
+    }
+
+    private void generateTreeSortSteps(int[] array, List<int[]> steps) {
+        // Build BST
+        TreeNode root = null;
+        for (int v : array) {
+            root = insertNode(root, v);
+            // record after each insertion (tree structure not shown in array)
+            steps.add(array.clone()); codeLineIndices.add(1); codeDepths.add(0);
+        }
+
+        // perform in-order traversal to build sorted array
+        int n = array.length;
+        int[] sorted = new int[n];
+        int[] idx = new int[]{0};
+        inOrderRecord(root, sorted, idx, steps);
+
+        // copy back into array and record each write
+        for (int i = 0; i < n; i++) {
+            array[i] = sorted[i];
+            steps.add(array.clone()); codeLineIndices.add(3); codeDepths.add(0);
+        }
+    }
+
+    private TreeNode insertNode(TreeNode node, int value) {
+        if (node == null) return new TreeNode(value);
+        if (value < node.val) node.left = insertNode(node.left, value);
+        else node.right = insertNode(node.right, value);
+        return node;
+    }
+
+    private void inOrderRecord(TreeNode node, int[] sorted, int[] idx, List<int[]> steps) {
+        if (node == null) return;
+        inOrderRecord(node.left, sorted, idx, steps);
+        sorted[idx[0]++] = node.val;
+        // record the building of sorted array (not yet copied to original array)
+        steps.add(sorted.clone()); codeLineIndices.add(2); codeDepths.add(0);
+        inOrderRecord(node.right, sorted, idx, steps);
+    }
+
+    private void updateCodeArea() {
+        codeLines = getCodeLinesForAlgorithm(selectedAlgorithm);
+        StringBuilder sb = new StringBuilder();
+        for (String line : codeLines) {
+            sb.append(line).append("\n");
+        }
+        codeArea.setText(sb.toString());
+        codeArea.setCaretPosition(0);
+        codeArea.select(0, 0);
+    }
+
+    private List<String> getCodeLinesForAlgorithm(String algorithm) {
+        List<String> lines = new ArrayList<>();
+        switch (algorithm) {
+            case "Bubble Sort":
+                lines.add("int n = array.length;");
+                lines.add("for (int i = 0; i < n - 1; i++) {");
+                lines.add("  for (int j = 0; j < n - i - 1; j++) {");
+                lines.add("    if (array[j] > array[j + 1]) {");
+                lines.add("      int temp = array[j];");
+                lines.add("      array[j] = array[j + 1];");
+                lines.add("      array[j + 1] = temp;");
+                lines.add("    }");
+                lines.add("  }");
+                lines.add("}");
+                break;
+            case "Insertion Sort":
+                lines.add("int n = array.length;");
+                lines.add("for (int i = 1; i < n; i++) {");
+                lines.add("  int key = array[i];");
+                lines.add("  int j = i - 1;");
+                lines.add("  while (j >= 0 && array[j] > key) {");
+                lines.add("    array[j + 1] = array[j];");
+                lines.add("    j = j - 1;");
+                lines.add("  }");
+                lines.add("  array[j + 1] = key;");
+                lines.add("}");
+                break;
+            case "Selection Sort":
+                lines.add("int n = array.length;");
+                lines.add("for (int i = 0; i < n - 1; i++) {");
+                lines.add("  int minIndex = i;");
+                lines.add("  for (int j = i + 1; j < n; j++) {");
+                lines.add("    if (array[j] < array[minIndex]) {");
+                lines.add("      minIndex = j;");
+                lines.add("    }");
+                lines.add("  }");
+                lines.add("  if (minIndex != i) {");
+                lines.add("    int temp = array[i];");
+                lines.add("    array[i] = array[minIndex];");
+                lines.add("    array[minIndex] = temp;");
+                lines.add("  }");
+                lines.add("}");
+                break;
+            default:
+                lines.add("(No line-level pseudocode available for this algorithm)");
+                break;
+        }
+        return lines;
+    }
+
+    private void highlightCodeLine(int lineIndex) {
+        if (codeArea == null || codeLines == null || lineIndex < 0 || lineIndex >= codeLines.size()) {
+            return;
+        }
+        try {
+            int start = codeArea.getLineStartOffset(lineIndex);
+            int end = codeArea.getLineEndOffset(lineIndex);
+            codeArea.requestFocusInWindow();
+            codeArea.select(start, end);
+        } catch (BadLocationException e) {
+            // ignore
         }
     }
 
