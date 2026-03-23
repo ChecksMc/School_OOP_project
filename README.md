@@ -32,6 +32,12 @@ The implementation is still in progress, and the following tasks are yet to be c
 # No external libraries are required for this project as it is implemented using standard Java libraries.
 ```
 
+## How to run
+To run the project, follow these steps:
+1. Ensure you have Java installed on your system.
+2. Compile the Java files in the `src` directory.
+3. Run the `main` class to start the visualizer.
+
 ## Project structure
 ```
 src/
@@ -222,8 +228,14 @@ Die Implementierung ist noch in Arbeit, und die folgenden Aufgaben müssen noch 
 - Hinzufügen einer `visualizer` Erweiterung, um eine Visualisierung für Sortieralgorithmen mit O(2n) Speicherkomplexität zu erstellen, wie z.B. Tree Sort.
 - Implementieren weiterer Sortieralgorithmen, wie Miracle Sort, Bogosort, Dictator Sort und Thanos Sort
 ## requirements.txt
-```# Für dieses Projekt sind keine externen Bibliotheken erforderlich, da es mit den Standard-Java-Bibliotheken implementiert ist.
 ```
+# Für dieses Projekt sind keine externen Bibliotheken erforderlich, da es mit den Standard-Java-Bibliotheken implementiert ist.
+```
+## Anwendungsanleitung
+Um das Projekt auszuführen, folgen Sie diesen Schritten:
+1. Stellen Sie sicher, dass Java auf Ihrem System installiert ist.
+2. Kompilieren Sie die Java-Dateien im `src` Verzeichnis.
+3. Führen Sie die `main` Klasse aus, um den Visualizer zu starten.
 ## Projektstruktur
 ```src/
 ├── main/
