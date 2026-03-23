@@ -3,11 +3,11 @@ import dataclass.sort_array;
 
 public abstract class sorter
 {
-    sort_array arr;
+    public sort_array arr;
     
-    public sorter(sort_array arr)
+    public sorter(sort_array in_arr)
     {
-        this.arr = arr;
+        this.arr = in_arr;
     }
 
     public abstract int[] solve();

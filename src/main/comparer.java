@@ -25,6 +25,7 @@ public class comparer extends JPanel {
     private JButton nextStepButton;
     private JButton playPauseButton;
     private JButton resetStepButton;
+    private JButton openVisualizersButton;
     private JButton selectAllButton;
     private JButton clearSelectionButton;
 
@@ -80,12 +81,14 @@ public class comparer extends JPanel {
         nextStepButton = new JButton("Next Step");
         playPauseButton = new JButton("Play");
         resetStepButton = new JButton("Reset Step Mode");
+        openVisualizersButton = new JButton("Open Multi Visualizer");
 
         styleButton(instantCompareButton, new Color(0, 132, 89));
         styleButton(startStepButton, new Color(122, 78, 185));
         styleButton(nextStepButton, new Color(211, 144, 23));
         styleButton(playPauseButton, new Color(157, 95, 255));
         styleButton(resetStepButton, new Color(189, 44, 44));
+        styleButton(openVisualizersButton, new Color(36, 121, 140));
 
         nextStepButton.setEnabled(false);
         playPauseButton.setEnabled(false);
@@ -95,6 +98,7 @@ public class comparer extends JPanel {
         modePanel.add(nextStepButton);
         modePanel.add(playPauseButton);
         modePanel.add(resetStepButton);
+        modePanel.add(openVisualizersButton);
 
         topPanel.add(inputPanel, BorderLayout.NORTH);
         topPanel.add(modePanel, BorderLayout.SOUTH);
@@ -145,6 +149,7 @@ public class comparer extends JPanel {
         nextStepButton.addActionListener(e -> runNextStep());
         playPauseButton.addActionListener(e -> toggleStepPlay());
         resetStepButton.addActionListener(e -> resetStepMode());
+        openVisualizersButton.addActionListener(e -> openMultiVisualizer());
 
         stepTimer = new Timer(s(125), e -> {
             if (stepIndex < stepAlgorithms.size()) {
@@ -157,8 +162,55 @@ public class comparer extends JPanel {
         statsArea.setText(
             "Choose algorithms from the selection panel, then use:\n" +
             "- Compare Instant: benchmark all selected algorithms immediately\n" +
-            "- Start Step Compare: benchmark one algorithm at a time using Next Step or Play\n"
+            "- Start Step Compare: benchmark one algorithm at a time using Next Step or Play\n" +
+            "- Open Multi Visualizer: open one visualizer tab per selected algorithm\n"
         );
+    }
+
+    private void openMultiVisualizer() {
+        int[] sourceArray = parseInput();
+        if (sourceArray == null) {
+            return;
+        }
+
+        List<String> selected = getSelectedAlgorithms();
+        if (selected.isEmpty()) {
+            JOptionPane.showMessageDialog(this,
+                "Select at least one algorithm from the selection screen.",
+                "No Algorithm Selected", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JFrame visualizerFrame = new JFrame("Multi Visualizer");
+        visualizerFrame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setFont(new Font("SansSerif", Font.BOLD, f(11)));
+
+        for (String algorithm : selected) {
+            visualizer viz = new visualizer();
+            viz.loadScenario(algorithm, sourceArray, true, usesAuxStorage(algorithm));
+            tabs.addTab(algorithm, viz);
+        }
+
+        visualizerFrame.add(tabs, BorderLayout.CENTER);
+
+        Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+        int width = Math.min(screen.width - 80, 1600);
+        int height = Math.min(screen.height - 80, 1000);
+        visualizerFrame.setSize(new Dimension(Math.max(900, width), Math.max(700, height)));
+        visualizerFrame.setLocationRelativeTo(SwingUtilities.getWindowAncestor(this));
+        visualizerFrame.setVisible(true);
+
+        statsArea.setText(
+            "Opened " + selected.size() + " visualizer tab(s).\n" +
+            "Algorithms: " + String.join(", ", selected) + "\n" +
+            "Each tab starts in Step Mode with the current input array.\n"
+        );
+    }
+
+    private boolean usesAuxStorage(String algorithm) {
+        return "Merge Sort".equals(algorithm) || "Tree Sort".equals(algorithm);
     }
 
     private JPanel createAlgorithmSelectionPanel() {
