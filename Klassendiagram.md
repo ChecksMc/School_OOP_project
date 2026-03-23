@@ -127,10 +127,13 @@ direction TB
     sorter <|-- insertion_sort : extends
     sorter <|-- tree_sort : extends
     sorter *-- sort_array : composes
+    bubble_sort ..> sort_array : 1 ... 1
+    selection_sort ..> sort_array : 1 ... 1
+    merge_sort ..> sort_array : 1 ... 2
+    insertion_sort ..> sort_array : 1 ... 1
+    tree_sort ..> sort_array : 1 ... 2
     visualizer ..> sorter : uses
     comparer ..> sorter : uses
     comparer ..> dataclass.sort_array : uses
     visualizer ..> dataclass.sort_array : uses
-    visualizer -- TreeNode : contains
-    tree_sort *-- TreeNode : contains
 ```

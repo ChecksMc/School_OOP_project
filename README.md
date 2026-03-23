@@ -27,6 +27,30 @@ The implementation is still in progress, and the following tasks are yet to be c
 - add a `visualizer` extention to add a visualization for sorting algorithms with O(2n) storage complexity, such as tree sort.
 - implement more sorting algorithms, such as miracle sort, bogosort, dictator sort and thanos sort
 
+## requirements.txt
+```
+# No external libraries are required for this project as it is implemented using standard Java libraries.
+```
+
+## Project structure
+```
+src/
+├── main/
+|   └── main.java
+│   └── comparer.java
+|   └── visualizer.java
+├── dataclass/
+│   └── sort_array.java
+└── sorter/
+    ├── bubble_sort.java
+    ├── insertion_sort.java
+    ├── merge_sort.java
+    ├── selection_sort.java
+    ├── sorter.java
+    └── tree_sort.java
+
+```
+
 ## Class Diagram
 ```mermaid
 classDiagram
@@ -197,3 +221,23 @@ Die Implementierung ist noch in Arbeit, und die folgenden Aufgaben müssen noch 
 - Implementieren des `comparer`, um den `visualizer` zu verwenden
 - Hinzufügen einer `visualizer` Erweiterung, um eine Visualisierung für Sortieralgorithmen mit O(2n) Speicherkomplexität zu erstellen, wie z.B. Tree Sort.
 - Implementieren weiterer Sortieralgorithmen, wie Miracle Sort, Bogosort, Dictator Sort und Thanos Sort
+## requirements.txt
+```# Für dieses Projekt sind keine externen Bibliotheken erforderlich, da es mit den Standard-Java-Bibliotheken implementiert ist.
+```
+## Projektstruktur
+```src/
+├── main/
+|   └── main.java
+│   └── comparer.java
+|   └── visualizer.java
+├── dataclass/
+│   └── sort_array.java
+└── sorter/
+    ├── bubble_sort.java
+    ├── insertion_sort.java
+    ├── merge_sort.java
+    ├── selection_sort.java
+    ├── sorter.java
+    └── tree_sort.java
+```
+
