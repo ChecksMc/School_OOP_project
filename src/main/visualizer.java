@@ -16,7 +16,8 @@ public class visualizer extends JPanel {
     private static final int AUX_EMPTY = Integer.MIN_VALUE;
     private static final int[] NO_SELECTION = new int[0];
     private static final String[] ALGORITHMS = {
-        "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort"
+        "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort",
+        "Miracle Sort", "Bogosort", "Dictator Sort", "Thanos Sort", "Intelligent Design Sort"
     };
 
     private JTextField inputField;
@@ -33,6 +34,7 @@ public class visualizer extends JPanel {
     private JButton stepOutButton;
     private JButton storageModeButton;
     private JButton selectedModeButton;
+    private JSlider stepSpeedSlider;
 
     private final Map<String, JToggleButton> algorithmButtons = new LinkedHashMap<>();
     private JPanel visualPanel;
@@ -122,6 +124,12 @@ public class visualizer extends JPanel {
                 stopPlay();
             }
         });
+        playTimer.setDelay(stepDelayFromSlider());
+    }
+
+    private int stepDelayFromSlider() {
+        int speed = stepSpeedSlider != null ? stepSpeedSlider.getValue() : 50;
+        return 20 + ((100 - speed) * 10);
     }
 
     public void loadScenario(String algorithm, int[] sourceArray, boolean startInStepMode, boolean preferDualStorageView) {
@@ -226,6 +234,7 @@ public class visualizer extends JPanel {
         playButton = new JButton("Play");
         storageModeButton = new JButton();
         selectedModeButton = new JButton();
+        stepSpeedSlider = new JSlider(1, 100, 50);
 
         styleActionButton(instantButton, new Color(45, 124, 246));
         styleActionButton(stepButton, new Color(0, 144, 115));
@@ -237,6 +246,14 @@ public class visualizer extends JPanel {
         styleActionButton(storageModeButton, new Color(73, 108, 188));
         styleActionButton(selectedModeButton, new Color(205, 95, 32));
         styleActionButton(resetButton, new Color(189, 44, 44));
+
+        stepSpeedSlider.setPreferredSize(new Dimension(s(120), s(24)));
+        stepSpeedSlider.setToolTipText("Step speed");
+        stepSpeedSlider.addChangeListener(e -> {
+            if (playTimer != null) {
+                playTimer.setDelay(stepDelayFromSlider());
+            }
+        });
 
         nextButton.setEnabled(false);
         stepIntoButton.setEnabled(false);
@@ -251,6 +268,8 @@ public class visualizer extends JPanel {
         modePanel.add(stepOverButton);
         modePanel.add(stepOutButton);
         modePanel.add(playButton);
+        modePanel.add(new JLabel("Speed"));
+        modePanel.add(stepSpeedSlider);
         modePanel.add(storageModeButton);
         modePanel.add(selectedModeButton);
         modePanel.add(resetButton);
@@ -271,7 +290,7 @@ public class visualizer extends JPanel {
 
     private JPanel createAlgorithmSelectionPanel() {
         JPanel shell = new JPanel(new BorderLayout(s(4), s(4)));
-        shell.setPreferredSize(new Dimension(s(120), s(220)));
+        shell.setPreferredSize(new Dimension(s(140), s(320)));
 
         JLabel title = new JLabel("Algorithm Selection");
         title.setFont(new Font("SansSerif", Font.BOLD, f(14)));
@@ -285,6 +304,11 @@ public class visualizer extends JPanel {
         addAlgorithmCard(cardPanel, group, "Selection Sort", "Few swaps, O(n^2)");
         addAlgorithmCard(cardPanel, group, "Merge Sort", "Consistent O(n log n)");
         addAlgorithmCard(cardPanel, group, "Tree Sort", "BST-based ordering");
+        addAlgorithmCard(cardPanel, group, "Miracle Sort", "Waits for sorted state");
+        addAlgorithmCard(cardPanel, group, "Bogosort", "Random shuffle until sorted");
+        addAlgorithmCard(cardPanel, group, "Dictator Sort", "Copies first value to all");
+        addAlgorithmCard(cardPanel, group, "Thanos Sort", "Snaps array repeatedly");
+        addAlgorithmCard(cardPanel, group, "Intelligent Design Sort", "Selection-like deterministic");
 
         JToggleButton defaultButton = algorithmButtons.get(selectedAlgorithm);
         if (defaultButton != null) {
@@ -293,8 +317,12 @@ public class visualizer extends JPanel {
         updateAlgorithmCardStyles();
         updateCodeArea();
 
+        JScrollPane cardScroll = new JScrollPane(cardPanel);
+        cardScroll.setBorder(BorderFactory.createEmptyBorder());
+        cardScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
         shell.add(title, BorderLayout.NORTH);
-        shell.add(cardPanel, BorderLayout.CENTER);
+        shell.add(cardScroll, BorderLayout.CENTER);
         return shell;
     }
 
@@ -672,6 +700,16 @@ public class visualizer extends JPanel {
                 return new merge_sort(sortArray);
             case "Tree Sort":
                 return new tree_sort(sortArray);
+            case "Miracle Sort":
+                return new miracle_sort(sortArray);
+            case "Bogosort":
+                return new bogo_sort(sortArray);
+            case "Dictator Sort":
+                return new dictator_sort(sortArray);
+            case "Thanos Sort":
+                return new thanos_sort(sortArray);
+            case "Intelligent Design Sort":
+                return new intelligent_design_sort(sortArray);
             default:
                 return new bubble_sort(sortArray);
         }
@@ -1023,6 +1061,32 @@ public class visualizer extends JPanel {
                 lines.add("root = insert(root, value);");
                 lines.add("sorted[idx++] = node.val; // in-order");
                 lines.add("array[i] = sorted[i];");
+                break;
+            case "Miracle Sort":
+                lines.add("repeat:");
+                lines.add("  check if already sorted;");
+                lines.add("  wait and check again;");
+                lines.add("stop at 200 checks or 2 minutes;");
+                break;
+            case "Bogosort":
+                lines.add("while not sorted:");
+                lines.add("  shuffle randomly;");
+                lines.add("  stop if attempt cap reached;");
+                break;
+            case "Dictator Sort":
+                lines.add("dictator = array[0];");
+                lines.add("for i = 1..n-1:");
+                lines.add("  array[i] = dictator;");
+                break;
+            case "Thanos Sort":
+                lines.add("while not sorted:");
+                lines.add("  keep only first half;");
+                lines.add("  copy back and zero-fill;");
+                break;
+            case "Intelligent Design Sort":
+                lines.add("for each i:");
+                lines.add("  find min in remaining;");
+                lines.add("  swap into place;");
                 break;
             default:
                 lines.add("(No line-level pseudocode available for this algorithm)");

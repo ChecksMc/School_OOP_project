@@ -14,7 +14,8 @@ public class comparer extends JPanel {
     // Reduced from 4 to keep comparer mode usable on typical laptop screens.
     private static final int UI_SCALE = 2;
     private static final String[] ALGORITHMS = {
-        "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort"
+        "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort",
+        "Miracle Sort", "Bogosort", "Dictator Sort", "Thanos Sort", "Intelligent Design Sort"
     };
 
     private JTextField inputField;
@@ -25,6 +26,7 @@ public class comparer extends JPanel {
     private JButton nextStepButton;
     private JButton playPauseButton;
     private JButton resetStepButton;
+    private JSlider stepSpeedSlider;
     private JButton selectAllButton;
     private JButton clearSelectionButton;
 
@@ -46,6 +48,11 @@ public class comparer extends JPanel {
 
     private static int f(int base) {
         return Math.max(1, base * UI_SCALE);
+    }
+
+    private int stepDelayFromSlider() {
+        int speed = stepSpeedSlider != null ? stepSpeedSlider.getValue() : 50;
+        return 20 + ((100 - speed) * 10);
     }
 
     public comparer() {
@@ -80,12 +87,16 @@ public class comparer extends JPanel {
         nextStepButton = new JButton("Next Step");
         playPauseButton = new JButton("Play");
         resetStepButton = new JButton("Reset Step Mode");
+        stepSpeedSlider = new JSlider(1, 100, 50);
 
         styleButton(instantCompareButton, new Color(0, 132, 89));
         styleButton(startStepButton, new Color(122, 78, 185));
         styleButton(nextStepButton, new Color(211, 144, 23));
         styleButton(playPauseButton, new Color(157, 95, 255));
         styleButton(resetStepButton, new Color(189, 44, 44));
+
+        stepSpeedSlider.setPreferredSize(new Dimension(s(110), s(20)));
+        stepSpeedSlider.setToolTipText("Step speed");
 
         nextStepButton.setEnabled(false);
         playPauseButton.setEnabled(false);
@@ -94,6 +105,8 @@ public class comparer extends JPanel {
         modePanel.add(startStepButton);
         modePanel.add(nextStepButton);
         modePanel.add(playPauseButton);
+        modePanel.add(new JLabel("Speed"));
+        modePanel.add(stepSpeedSlider);
         modePanel.add(resetStepButton);
 
         topPanel.add(inputPanel, BorderLayout.NORTH);
@@ -145,6 +158,11 @@ public class comparer extends JPanel {
         nextStepButton.addActionListener(e -> runNextStep());
         playPauseButton.addActionListener(e -> toggleStepPlay());
         resetStepButton.addActionListener(e -> resetStepMode());
+        stepSpeedSlider.addChangeListener(e -> {
+            if (stepTimer != null) {
+                stepTimer.setDelay(stepDelayFromSlider());
+            }
+        });
 
         stepTimer = new Timer(s(125), e -> {
             if (stepIndex < stepAlgorithms.size()) {
@@ -153,6 +171,7 @@ public class comparer extends JPanel {
                 finishStepMode();
             }
         });
+        stepTimer.setDelay(stepDelayFromSlider());
 
         statsArea.setText(
             "Choose algorithms from the selection panel, then use:\n" +
@@ -163,7 +182,7 @@ public class comparer extends JPanel {
 
     private JPanel createAlgorithmSelectionPanel() {
         JPanel shell = new JPanel(new BorderLayout(s(4), s(4)));
-        shell.setPreferredSize(new Dimension(Math.min(s(130), 320), s(230)));
+        shell.setPreferredSize(new Dimension(Math.min(s(150), 360), s(320)));
 
         JLabel title = new JLabel("Algorithm Selection");
         title.setFont(new Font("SansSerif", Font.BOLD, f(14)));
@@ -175,6 +194,11 @@ public class comparer extends JPanel {
         addAlgorithmCard(cardsPanel, "Selection Sort", "Low swaps, O(n^2)");
         addAlgorithmCard(cardsPanel, "Merge Sort", "Reliable O(n log n)");
         addAlgorithmCard(cardsPanel, "Tree Sort", "BST in-order traversal");
+        addAlgorithmCard(cardsPanel, "Miracle Sort", "Wait-based novelty sort");
+        addAlgorithmCard(cardsPanel, "Bogosort", "Random shuffle until sorted");
+        addAlgorithmCard(cardsPanel, "Dictator Sort", "Copies first value to all");
+        addAlgorithmCard(cardsPanel, "Thanos Sort", "Keeps half repeatedly");
+        addAlgorithmCard(cardsPanel, "Intelligent Design Sort", "Deterministic placement sort");
 
         for (JToggleButton card : algorithmCards.values()) {
             card.setSelected(true);
@@ -201,8 +225,12 @@ public class comparer extends JPanel {
         footer.add(selectAllButton);
         footer.add(clearSelectionButton);
 
+        JScrollPane cardsScroll = new JScrollPane(cardsPanel);
+        cardsScroll.setBorder(BorderFactory.createEmptyBorder());
+        cardsScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
         shell.add(title, BorderLayout.NORTH);
-        shell.add(cardsPanel, BorderLayout.CENTER);
+        shell.add(cardsScroll, BorderLayout.CENTER);
         shell.add(footer, BorderLayout.SOUTH);
         return shell;
     }
@@ -417,10 +445,18 @@ public class comparer extends JPanel {
 
     private ComparisonResult benchmarkAlgorithm(String algorithm, int[] sourceArray) {
         try {
-            sort_array warmup = new sort_array(sourceArray.clone());
-            createSorter(algorithm, warmup).solve();
+            boolean novelty = "Miracle Sort".equals(algorithm)
+                || "Bogosort".equals(algorithm)
+                || "Dictator Sort".equals(algorithm)
+                || "Thanos Sort".equals(algorithm)
+                || "Intelligent Design Sort".equals(algorithm);
 
-            int runs = sourceArray.length < 100 ? 10 : 3;
+            if (!novelty) {
+                sort_array warmup = new sort_array(sourceArray.clone());
+                createSorter(algorithm, warmup).solve();
+            }
+
+            int runs = novelty ? 1 : (sourceArray.length < 100 ? 10 : 3);
             long totalTime = 0;
 
             for (int run = 0; run < runs; run++) {
@@ -497,6 +533,11 @@ public class comparer extends JPanel {
         stats.append("Selection Sort:  O(n^2) average and worst\n");
         stats.append("Merge Sort:      O(n log n) all cases\n");
         stats.append("Tree Sort:       O(n log n) average, O(n^2) worst\n");
+        stats.append("Miracle Sort:    check-based novelty with hard cap\n");
+        stats.append("Bogosort:        random expected-time novelty\n");
+        stats.append("Dictator Sort:   O(n), not a real sorting strategy\n");
+        stats.append("Thanos Sort:     novelty reduction strategy\n");
+        stats.append("Intelligent Design Sort: O(n^2) deterministic\n");
 
         if (completedResults.size() > successful.size()) {
             stats.append("\nErrors:\n");
@@ -546,6 +587,16 @@ public class comparer extends JPanel {
                 return new merge_sort(sortArray);
             case "Tree Sort":
                 return new tree_sort(sortArray);
+            case "Miracle Sort":
+                return new miracle_sort(sortArray);
+            case "Bogosort":
+                return new bogo_sort(sortArray);
+            case "Dictator Sort":
+                return new dictator_sort(sortArray);
+            case "Thanos Sort":
+                return new thanos_sort(sortArray);
+            case "Intelligent Design Sort":
+                return new intelligent_design_sort(sortArray);
             default:
                 return new bubble_sort(sortArray);
         }
@@ -563,6 +614,16 @@ public class comparer extends JPanel {
                 return String.format("~%d (n log n)", (int) (n * Math.log(n) / Math.log(2)));
             case "Tree Sort":
                 return String.format("~%d (n log n)", (int) (n * Math.log(n) / Math.log(2)));
+            case "Miracle Sort":
+                return "<=200 checks (capped)";
+            case "Bogosort":
+                return "Unbounded expected";
+            case "Dictator Sort":
+                return String.format("~%d (n)", Math.max(0, n - 1));
+            case "Thanos Sort":
+                return String.format("~%d (n)", n);
+            case "Intelligent Design Sort":
+                return String.format("~%d (n^2)", n * (n - 1) / 2);
             default:
                 return "Unknown";
         }
