@@ -2,6 +2,9 @@ package main;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
+import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioSystem;
+import javax.sound.sampled.SourceDataLine;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -15,6 +18,9 @@ public class visualizer extends JPanel {
     private static final int UI_SCALE = 4;
     private static final int AUX_EMPTY = Integer.MIN_VALUE;
     private static final int[] NO_SELECTION = new int[0];
+    private static final long POP_MIN_INTERVAL_NS = 25_000_000L;
+    private static final AudioFormat POP_FORMAT = new AudioFormat(22_050f, 8, 1, true, false);
+    private static final byte[] POP_SAMPLE = createPopSample();
     private static final String[] ALGORITHMS = {
         "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort",
         "Miracle Sort", "Bogosort", "Dictator Sort", "Thanos Sort", "Intelligent Design Sort"
@@ -60,6 +66,7 @@ public class visualizer extends JPanel {
     private List<Integer> codeDepths;
     private JTextArea codeArea;
     private Timer playTimer;
+    private long lastPopNanos = 0L;
 
     private static class TreeNode {
         int val;
@@ -77,6 +84,24 @@ public class visualizer extends JPanel {
 
     private static int f(int base) {
         return Math.max(1, base * UI_SCALE);
+    }
+
+    private static byte[] createPopSample() {
+        int length = 1400;
+        byte[] sample = new byte[length];
+        for (int i = 0; i < length; i++) {
+            double t = i / (double) length;
+            double env = Math.exp(-8.0 * t);
+            double wave = Math.sin(2.0 * Math.PI * 200.0 * t) + 0.35 * (Math.random() * 2.0 - 1.0);
+            int v = (int) (env * wave * 110.0);
+            if (v > 127) {
+                v = 127;
+            } else if (v < -128) {
+                v = -128;
+            }
+            sample[i] = (byte) v;
+        }
+        return sample;
     }
 
     public visualizer() {
@@ -224,14 +249,14 @@ public class visualizer extends JPanel {
     private JPanel createModePanel() {
         JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, s(6), s(4)));
 
-        instantButton = new JButton("Instant Sort");
-        stepButton = new JButton("Step Mode");
-        resetButton = new JButton("Reset");
-        nextButton = new JButton("Next Step");
-        stepIntoButton = new JButton("Step Into");
-        stepOverButton = new JButton("Step Over");
-        stepOutButton = new JButton("Step Out");
-        playButton = new JButton("Play");
+        instantButton = new JButton("I");
+        stepButton = new JButton("M");
+        resetButton = new JButton("R");
+        nextButton = new JButton("N");
+        stepIntoButton = new JButton("T");
+        stepOverButton = new JButton("O");
+        stepOutButton = new JButton("U");
+        playButton = new JButton("P");
         storageModeButton = new JButton();
         selectedModeButton = new JButton();
         stepSpeedSlider = new JSlider(1, 100, 50);
@@ -246,6 +271,17 @@ public class visualizer extends JPanel {
         styleActionButton(storageModeButton, new Color(73, 108, 188));
         styleActionButton(selectedModeButton, new Color(205, 95, 32));
         styleActionButton(resetButton, new Color(189, 44, 44));
+
+        configureCompactModeButton(instantButton, "Instant Sort");
+        configureCompactModeButton(stepButton, "Start Step Mode");
+        configureCompactModeButton(nextButton, "Next Step");
+        configureCompactModeButton(stepIntoButton, "Step Into");
+        configureCompactModeButton(stepOverButton, "Step Over");
+        configureCompactModeButton(stepOutButton, "Step Out");
+        configureCompactModeButton(playButton, "Play / Pause");
+        configureCompactModeButton(storageModeButton, "O(2n) Storage View");
+        configureCompactModeButton(selectedModeButton, "Selected Highlight Mode");
+        configureCompactModeButton(resetButton, "Reset");
 
         stepSpeedSlider.setPreferredSize(new Dimension(s(120), s(24)));
         stepSpeedSlider.setToolTipText("Step speed");
@@ -268,7 +304,7 @@ public class visualizer extends JPanel {
         modePanel.add(stepOverButton);
         modePanel.add(stepOutButton);
         modePanel.add(playButton);
-        modePanel.add(new JLabel("Speed"));
+        modePanel.add(new JLabel("v"));
         modePanel.add(stepSpeedSlider);
         modePanel.add(storageModeButton);
         modePanel.add(selectedModeButton);
@@ -286,6 +322,13 @@ public class visualizer extends JPanel {
         resetButton.addActionListener(e -> reset());
 
         return modePanel;
+    }
+
+    private void configureCompactModeButton(JButton button, String tooltip) {
+        button.setToolTipText(tooltip);
+        button.setFont(new Font("SansSerif", Font.BOLD, 12));
+        button.setMargin(new Insets(1, 2, 1, 2));
+        button.setPreferredSize(new Dimension(28, 24));
     }
 
     private JPanel createAlgorithmSelectionPanel() {
@@ -385,7 +428,8 @@ public class visualizer extends JPanel {
 
     private void updateStorageModeButton() {
         if (storageModeButton != null) {
-            storageModeButton.setText(dualStorageMode ? "Storage View: Dual" : "Storage View: Single");
+            storageModeButton.setText("O");
+            storageModeButton.setToolTipText(dualStorageMode ? "O(2n) View: Dual" : "O(2n) View: Single");
         }
     }
 
@@ -400,7 +444,8 @@ public class visualizer extends JPanel {
 
     private void updateSelectedModeButton() {
         if (selectedModeButton != null) {
-            selectedModeButton.setText(selectedHighlightMode ? "Selected: On" : "Selected: Off");
+            selectedModeButton.setText("H");
+            selectedModeButton.setToolTipText(selectedHighlightMode ? "Highlight Selected: On" : "Highlight Selected: Off");
         }
     }
 
@@ -459,7 +504,7 @@ public class visualizer extends JPanel {
         stepOverButton.setEnabled(true);
         stepOutButton.setEnabled(true);
         playButton.setEnabled(true);
-        playButton.setText("Play");
+        playButton.setText("P");
         stopPlay();
         updateCodeArea();
         if (codeLineIndices != null && !codeLineIndices.isEmpty()) {
@@ -495,8 +540,12 @@ public class visualizer extends JPanel {
             return;
         }
 
+        int[] previousArray = currentArray != null ? currentArray.clone() : sortSteps.get(stepIndex).clone();
+        int[] nextArray = sortSteps.get(stepIndex + 1);
+        maybePlaySwapPop(previousArray, nextArray);
+
         stepIndex++;
-        currentArray = sortSteps.get(stepIndex).clone();
+        currentArray = nextArray.clone();
         currentAuxArray = getAuxStep(stepIndex);
         currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
         currentSelectedAux = getSelectedAuxStep(stepIndex);
@@ -616,16 +665,16 @@ public class visualizer extends JPanel {
     private void togglePlay() {
         if (playTimer.isRunning()) {
             playTimer.stop();
-            playButton.setText("Play");
+            playButton.setText("P");
         } else {
             playTimer.start();
-            playButton.setText("Pause");
+            playButton.setText("B");
         }
     }
 
     private void stopPlay() {
         playTimer.stop();
-        playButton.setText("Play");
+        playButton.setText("P");
     }
 
     private void reset() {
@@ -650,10 +699,72 @@ public class visualizer extends JPanel {
         stepOutButton.setEnabled(false);
         playButton.setEnabled(false);
         playTimer.stop();
-        playButton.setText("Play");
+        playButton.setText("P");
         statusLabel.setText("Reset complete. Pick an algorithm and sort again.");
         codeArea.select(0, 0);
         visualPanel.repaint();
+    }
+
+    private void maybePlaySwapPop(int[] before, int[] after) {
+        if (before == null || after == null) {
+            return;
+        }
+        if (isSwapStep(before, after)) {
+            playPopSound();
+        }
+    }
+
+    private boolean isSwapStep(int[] before, int[] after) {
+        if (before.length != after.length) {
+            return false;
+        }
+
+        int first = -1;
+        int second = -1;
+        int diffCount = 0;
+        for (int i = 0; i < before.length; i++) {
+            if (before[i] != after[i]) {
+                if (diffCount == 0) {
+                    first = i;
+                } else if (diffCount == 1) {
+                    second = i;
+                }
+                diffCount++;
+                if (diffCount > 2) {
+                    return false;
+                }
+            }
+        }
+
+        if (diffCount != 2) {
+            return false;
+        }
+
+        return before[first] == after[second] && before[second] == after[first];
+    }
+
+    private void playPopSound() {
+        long now = System.nanoTime();
+        if (now - lastPopNanos < POP_MIN_INTERVAL_NS) {
+            return;
+        }
+        lastPopNanos = now;
+
+        Thread soundThread = new Thread(() -> {
+            try {
+                SourceDataLine line = AudioSystem.getSourceDataLine(POP_FORMAT);
+                line.open(POP_FORMAT, POP_SAMPLE.length);
+                line.start();
+                line.write(POP_SAMPLE, 0, POP_SAMPLE.length);
+                line.drain();
+                line.stop();
+                line.close();
+            } catch (Exception ex) {
+                Toolkit.getDefaultToolkit().beep();
+            }
+        }, "swap-pop-sfx");
+        soundThread.setDaemon(true);
+        soundThread.start();
     }
 
     private boolean parseInput() {
