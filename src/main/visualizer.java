@@ -14,11 +14,15 @@ import sorter.*;
 public class visualizer extends JPanel {
     private static final int UI_SCALE = 4;
     private static final int AUX_EMPTY = Integer.MIN_VALUE;
+    private static final int[] NO_SELECTION = new int[0];
     private static final String[] ALGORITHMS = {
         "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort"
     };
 
     private JTextField inputField;
+    private JTextField randomSizeField;
+    private JButton randomArrayButton;
+
     private JButton instantButton;
     private JButton stepButton;
     private JButton resetButton;
@@ -28,19 +32,27 @@ public class visualizer extends JPanel {
     private JButton stepOverButton;
     private JButton stepOutButton;
     private JButton storageModeButton;
+    private JButton selectedModeButton;
+
     private final Map<String, JToggleButton> algorithmButtons = new LinkedHashMap<>();
     private JPanel visualPanel;
     private JLabel statusLabel;
 
     private String selectedAlgorithm = ALGORITHMS[0];
     private boolean dualStorageMode = false;
+    private boolean selectedHighlightMode = true;
 
     private int[] originalArray;
     private int[] currentArray;
     private int[] currentAuxArray;
+    private int[] currentSelectedPrimary = NO_SELECTION;
+    private int[] currentSelectedAux = NO_SELECTION;
     private int stepIndex = 0;
+
     private List<int[]> sortSteps;
     private List<int[]> auxSteps;
+    private List<int[]> selectedPrimarySteps;
+    private List<int[]> selectedAuxSteps;
     private List<String> codeLines;
     private List<Integer> codeLineIndices;
     private List<Integer> codeDepths;
@@ -101,6 +113,7 @@ public class visualizer extends JPanel {
         add(statusLabel, BorderLayout.SOUTH);
 
         updateStorageModeButton();
+        updateSelectedModeButton();
 
         playTimer = new Timer(s(125), e -> {
             if (sortSteps != null && stepIndex < sortSteps.size() - 1) {
@@ -156,12 +169,48 @@ public class visualizer extends JPanel {
         JLabel inputLabel = new JLabel("Array (comma-separated):");
         inputLabel.setFont(new Font("SansSerif", Font.BOLD, f(12)));
 
-        inputField = new JTextField("5,3,8,1,9,2,7,4,6", 32);
+        inputField = new JTextField("5,3,8,1,9,2,7,4,6", 24);
         inputField.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+
+        JLabel randomLabel = new JLabel("Random Size:");
+        randomLabel.setFont(new Font("SansSerif", Font.BOLD, f(12)));
+
+        randomSizeField = new JTextField("20", 4);
+        randomSizeField.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+
+        randomArrayButton = new JButton("Generate Random");
+        styleActionButton(randomArrayButton, new Color(50, 112, 201));
+        randomArrayButton.addActionListener(e -> generateRandomArray());
 
         inputPanel.add(inputLabel);
         inputPanel.add(inputField);
+        inputPanel.add(randomLabel);
+        inputPanel.add(randomSizeField);
+        inputPanel.add(randomArrayButton);
         return inputPanel;
+    }
+
+    private void generateRandomArray() {
+        try {
+            int size = Integer.parseInt(randomSizeField.getText().trim());
+            if (size < 1 || size > 1000) {
+                statusLabel.setText("Random size must be between 1 and 1000.");
+                return;
+            }
+
+            int[] values = new int[size];
+            for (int i = 0; i < size; i++) {
+                values[i] = (int) (Math.random() * 1000);
+            }
+
+            inputField.setText(toCsv(values));
+            if (parseInput()) {
+                statusLabel.setText("Generated random array with " + size + " values.");
+                visualPanel.repaint();
+            }
+        } catch (NumberFormatException ex) {
+            statusLabel.setText("Random size must be a number.");
+        }
     }
 
     private JPanel createModePanel() {
@@ -176,6 +225,7 @@ public class visualizer extends JPanel {
         stepOutButton = new JButton("Step Out");
         playButton = new JButton("Play");
         storageModeButton = new JButton();
+        selectedModeButton = new JButton();
 
         styleActionButton(instantButton, new Color(45, 124, 246));
         styleActionButton(stepButton, new Color(0, 144, 115));
@@ -185,6 +235,7 @@ public class visualizer extends JPanel {
         styleActionButton(stepOverButton, new Color(85, 107, 47));
         styleActionButton(stepOutButton, new Color(184, 134, 11));
         styleActionButton(storageModeButton, new Color(73, 108, 188));
+        styleActionButton(selectedModeButton, new Color(205, 95, 32));
         styleActionButton(resetButton, new Color(189, 44, 44));
 
         nextButton.setEnabled(false);
@@ -201,6 +252,7 @@ public class visualizer extends JPanel {
         modePanel.add(stepOutButton);
         modePanel.add(playButton);
         modePanel.add(storageModeButton);
+        modePanel.add(selectedModeButton);
         modePanel.add(resetButton);
 
         instantButton.addActionListener(e -> instantSort());
@@ -211,6 +263,7 @@ public class visualizer extends JPanel {
         stepOutButton.addActionListener(e -> stepOut());
         playButton.addActionListener(e -> togglePlay());
         storageModeButton.addActionListener(e -> toggleStorageMode());
+        selectedModeButton.addActionListener(e -> toggleSelectedMode());
         resetButton.addActionListener(e -> reset());
 
         return modePanel;
@@ -259,6 +312,8 @@ public class visualizer extends JPanel {
             if (originalArray != null) {
                 currentAuxArray = requiresAuxStorage(selectedAlgorithm) ? createEmptyAuxArray(originalArray.length) : null;
             }
+            currentSelectedPrimary = NO_SELECTION;
+            currentSelectedAux = NO_SELECTION;
             visualPanel.repaint();
         });
 
@@ -306,6 +361,21 @@ public class visualizer extends JPanel {
         }
     }
 
+    private void toggleSelectedMode() {
+        selectedHighlightMode = !selectedHighlightMode;
+        updateSelectedModeButton();
+        statusLabel.setText(selectedHighlightMode
+            ? "Selected mode ON: inspected indices are highlighted."
+            : "Selected mode OFF.");
+        visualPanel.repaint();
+    }
+
+    private void updateSelectedModeButton() {
+        if (selectedModeButton != null) {
+            selectedModeButton.setText(selectedHighlightMode ? "Selected: On" : "Selected: Off");
+        }
+    }
+
     private void instantSort() {
         if (!parseInput()) {
             return;
@@ -321,6 +391,9 @@ public class visualizer extends JPanel {
         } else {
             currentAuxArray = null;
         }
+
+        currentSelectedPrimary = NO_SELECTION;
+        currentSelectedAux = NO_SELECTION;
 
         double timeMs = (endTime - startTime) / 1_000_000.0;
         statusLabel.setText("Sorted using " + selectedAlgorithm + " in " + String.format("%.3f", timeMs) + " ms");
@@ -349,6 +422,8 @@ public class visualizer extends JPanel {
 
         currentArray = sortSteps.get(0).clone();
         currentAuxArray = getAuxStep(stepIndex);
+        currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
+        currentSelectedAux = getSelectedAuxStep(stepIndex);
         statusLabel.setText("Step 1 of " + sortSteps.size() + " - " + selectedAlgorithm);
 
         nextButton.setEnabled(true);
@@ -373,6 +448,20 @@ public class visualizer extends JPanel {
         return aux == null ? null : aux.clone();
     }
 
+    private int[] getSelectedPrimaryStep(int index) {
+        if (selectedPrimarySteps == null || index < 0 || index >= selectedPrimarySteps.size()) {
+            return NO_SELECTION;
+        }
+        return selectedPrimarySteps.get(index).clone();
+    }
+
+    private int[] getSelectedAuxStep(int index) {
+        if (selectedAuxSteps == null || index < 0 || index >= selectedAuxSteps.size()) {
+            return NO_SELECTION;
+        }
+        return selectedAuxSteps.get(index).clone();
+    }
+
     private void nextStep() {
         if (sortSteps == null || stepIndex >= sortSteps.size() - 1) {
             return;
@@ -381,6 +470,8 @@ public class visualizer extends JPanel {
         stepIndex++;
         currentArray = sortSteps.get(stepIndex).clone();
         currentAuxArray = getAuxStep(stepIndex);
+        currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
+        currentSelectedAux = getSelectedAuxStep(stepIndex);
 
         if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
             highlightCodeLine(codeLineIndices.get(stepIndex));
@@ -430,6 +521,8 @@ public class visualizer extends JPanel {
         stepIndex = j;
         currentArray = sortSteps.get(stepIndex).clone();
         currentAuxArray = getAuxStep(stepIndex);
+        currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
+        currentSelectedAux = getSelectedAuxStep(stepIndex);
 
         if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
             highlightCodeLine(codeLineIndices.get(stepIndex));
@@ -473,6 +566,8 @@ public class visualizer extends JPanel {
         stepIndex = j;
         currentArray = sortSteps.get(stepIndex).clone();
         currentAuxArray = getAuxStep(stepIndex);
+        currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
+        currentSelectedAux = getSelectedAuxStep(stepIndex);
 
         if (codeLineIndices != null && stepIndex < codeLineIndices.size()) {
             highlightCodeLine(codeLineIndices.get(stepIndex));
@@ -509,6 +604,8 @@ public class visualizer extends JPanel {
         stepIndex = 0;
         sortSteps = null;
         auxSteps = null;
+        selectedPrimarySteps = null;
+        selectedAuxSteps = null;
         codeLines = null;
         codeLineIndices = null;
         codeDepths = null;
@@ -516,6 +613,8 @@ public class visualizer extends JPanel {
         currentAuxArray = originalArray != null && requiresAuxStorage(selectedAlgorithm)
             ? createEmptyAuxArray(originalArray.length)
             : null;
+        currentSelectedPrimary = NO_SELECTION;
+        currentSelectedAux = NO_SELECTION;
 
         nextButton.setEnabled(false);
         stepIntoButton.setEnabled(false);
@@ -549,6 +648,8 @@ public class visualizer extends JPanel {
             currentAuxArray = requiresAuxStorage(selectedAlgorithm)
                 ? createEmptyAuxArray(parts.length)
                 : null;
+            currentSelectedPrimary = NO_SELECTION;
+            currentSelectedAux = NO_SELECTION;
 
             return true;
         } catch (Exception e) {
@@ -583,6 +684,9 @@ public class visualizer extends JPanel {
     private List<int[]> generateSortSteps(String algorithm) {
         List<int[]> steps = new ArrayList<>();
         auxSteps = new ArrayList<>();
+        selectedPrimarySteps = new ArrayList<>();
+        selectedAuxSteps = new ArrayList<>();
+
         codeLines = getCodeLinesForAlgorithm(algorithm);
         codeLineIndices = new ArrayList<>();
         codeDepths = new ArrayList<>();
@@ -618,10 +722,28 @@ public class visualizer extends JPanel {
     }
 
     private void recordStep(List<int[]> steps, int[] primary, int[] secondary, int codeLineIndex, int depth) {
+        recordStep(steps, primary, secondary, codeLineIndex, depth, null, null);
+    }
+
+    private void recordStep(
+        List<int[]> steps,
+        int[] primary,
+        int[] secondary,
+        int codeLineIndex,
+        int depth,
+        int[] selectedPrimary,
+        int[] selectedAux
+    ) {
         steps.add(primary.clone());
         auxSteps.add(secondary == null ? null : secondary.clone());
+        selectedPrimarySteps.add(cloneSelection(selectedPrimary));
+        selectedAuxSteps.add(cloneSelection(selectedAux));
         codeLineIndices.add(codeLineIndex);
         codeDepths.add(depth);
+    }
+
+    private int[] cloneSelection(int[] selection) {
+        return selection == null ? NO_SELECTION : selection.clone();
     }
 
     private int[] createEmptyAuxArray(int size) {
@@ -633,16 +755,17 @@ public class visualizer extends JPanel {
     private void generateBubbleSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
-            recordStep(steps, array, null, 1, 0);
+            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
             for (int j = 0; j < n - i - 1; j++) {
-                recordStep(steps, array, null, 2, 0);
-                recordStep(steps, array, null, 3, 0);
+                int[] inspected = new int[] {j, j + 1};
+                recordStep(steps, array, null, 2, 0, inspected, null);
+                recordStep(steps, array, null, 3, 0, inspected, null);
                 if (array[j] > array[j + 1]) {
-                    recordStep(steps, array, null, 4, 0);
+                    recordStep(steps, array, null, 4, 0, inspected, null);
                     int temp = array[j];
                     array[j] = array[j + 1];
                     array[j + 1] = temp;
-                    recordStep(steps, array, null, 6, 0);
+                    recordStep(steps, array, null, 6, 0, inspected, null);
                 }
             }
         }
@@ -651,69 +774,69 @@ public class visualizer extends JPanel {
     private void generateInsertionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 1; i < n; i++) {
-            recordStep(steps, array, null, 1, 0);
+            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
             int key = array[i];
-            recordStep(steps, array, null, 2, 0);
+            recordStep(steps, array, null, 2, 0, new int[] {i}, null);
             int j = i - 1;
-            recordStep(steps, array, null, 3, 0);
+            recordStep(steps, array, null, 3, 0, new int[] {j}, null);
             while (j >= 0 && array[j] > key) {
-                recordStep(steps, array, null, 4, 0);
+                recordStep(steps, array, null, 4, 0, new int[] {j, j + 1}, null);
                 array[j + 1] = array[j];
-                recordStep(steps, array, null, 5, 0);
+                recordStep(steps, array, null, 5, 0, new int[] {j + 1}, null);
                 j = j - 1;
-                recordStep(steps, array, null, 6, 0);
+                recordStep(steps, array, null, 6, 0, new int[] {Math.max(0, j)}, null);
             }
             array[j + 1] = key;
-            recordStep(steps, array, null, 8, 0);
+            recordStep(steps, array, null, 8, 0, new int[] {j + 1}, null);
         }
     }
 
     private void generateSelectionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
-            recordStep(steps, array, null, 1, 0);
+            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
             int minIndex = i;
-            recordStep(steps, array, null, 2, 0);
+            recordStep(steps, array, null, 2, 0, new int[] {minIndex}, null);
             for (int j = i + 1; j < n; j++) {
-                recordStep(steps, array, null, 3, 0);
+                recordStep(steps, array, null, 3, 0, new int[] {j, minIndex}, null);
                 if (array[j] < array[minIndex]) {
                     minIndex = j;
-                    recordStep(steps, array, null, 5, 0);
+                    recordStep(steps, array, null, 5, 0, new int[] {minIndex}, null);
                 }
             }
             if (minIndex != i) {
-                recordStep(steps, array, null, 8, 0);
+                recordStep(steps, array, null, 8, 0, new int[] {i, minIndex}, null);
                 int temp = array[i];
                 array[i] = array[minIndex];
                 array[minIndex] = temp;
-                recordStep(steps, array, null, 11, 0);
+                recordStep(steps, array, null, 11, 0, new int[] {i, minIndex}, null);
             }
         }
     }
 
     private void generateMergeSortSteps(int[] array, List<int[]> steps) {
         if (array.length <= 1) {
-            recordStep(steps, array, createEmptyAuxArray(array.length), 0, 0);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 0, 0, new int[] {0}, null);
             return;
         }
         mergeSortRec(array, 0, array.length - 1, steps, 0);
     }
 
     private void mergeSortRec(int[] array, int left, int right, List<int[]> steps, int depth) {
-        recordStep(steps, array, createEmptyAuxArray(array.length), 1, depth);
+        recordStep(steps, array, createEmptyAuxArray(array.length), 1, depth, new int[] {left, right}, null);
         if (left < right) {
             int mid = left + (right - left) / 2;
 
-            recordStep(steps, array, createEmptyAuxArray(array.length), 3, depth);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 3, depth, new int[] {left, mid}, null);
             mergeSortRec(array, left, mid, steps, depth + 1);
 
-            recordStep(steps, array, createEmptyAuxArray(array.length), 4, depth);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 4, depth, new int[] {mid + 1, right}, null);
             mergeSortRec(array, mid + 1, right, steps, depth + 1);
 
             mergeWithRecording(array, left, mid, right, steps, depth);
-            recordStep(steps, array, createEmptyAuxArray(array.length), 6, depth);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 6, depth, new int[] {left, right}, null);
         } else {
-            recordStep(steps, array, createEmptyAuxArray(array.length), 0, depth);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 0, depth, new int[] {left}, null);
         }
     }
 
@@ -742,36 +865,44 @@ public class visualizer extends JPanel {
         int j = 0;
         int k = left;
 
-        recordStep(steps, array, auxSnapshot, 8, depth);
+        recordStep(steps, array, auxSnapshot, 8, depth, new int[] {k}, new int[] {left, mid + 1});
 
         while (i < n1 && j < n2) {
+            int leftAuxIndex = left + i;
+            int rightAuxIndex = mid + 1 + j;
+            int targetIndex = k;
+
             if (leftArr[i] <= rightArr[j]) {
-                array[k] = leftArr[i];
-                auxSnapshot[left + i] = AUX_EMPTY;
+                array[targetIndex] = leftArr[i];
+                auxSnapshot[leftAuxIndex] = AUX_EMPTY;
                 i++;
             } else {
-                array[k] = rightArr[j];
-                auxSnapshot[mid + 1 + j] = AUX_EMPTY;
+                array[targetIndex] = rightArr[j];
+                auxSnapshot[rightAuxIndex] = AUX_EMPTY;
                 j++;
             }
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth);
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {leftAuxIndex, rightAuxIndex});
         }
 
         while (i < n1) {
-            array[k] = leftArr[i];
-            auxSnapshot[left + i] = AUX_EMPTY;
+            int auxIndex = left + i;
+            int targetIndex = k;
+            array[targetIndex] = leftArr[i];
+            auxSnapshot[auxIndex] = AUX_EMPTY;
             i++;
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth);
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {auxIndex});
         }
 
         while (j < n2) {
-            array[k] = rightArr[j];
-            auxSnapshot[mid + 1 + j] = AUX_EMPTY;
+            int auxIndex = mid + 1 + j;
+            int targetIndex = k;
+            array[targetIndex] = rightArr[j];
+            auxSnapshot[auxIndex] = AUX_EMPTY;
             j++;
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth);
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {auxIndex});
         }
     }
 
@@ -779,9 +910,10 @@ public class visualizer extends JPanel {
         TreeNode root = null;
         int[] sorted = createEmptyAuxArray(array.length);
 
-        for (int v : array) {
+        for (int inputIndex = 0; inputIndex < array.length; inputIndex++) {
+            int v = array[inputIndex];
             root = insertNode(root, v);
-            recordStep(steps, array, sorted, 1, 0);
+            recordStep(steps, array, sorted, 1, 0, new int[] {inputIndex}, null);
         }
 
         int[] idx = new int[] {0};
@@ -794,7 +926,7 @@ public class visualizer extends JPanel {
             }
             array[i] = auxWorking[i];
             auxWorking[i] = AUX_EMPTY;
-            recordStep(steps, array, auxWorking, 3, 0);
+            recordStep(steps, array, auxWorking, 3, 0, new int[] {i}, new int[] {i});
         }
     }
 
@@ -815,9 +947,10 @@ public class visualizer extends JPanel {
             return;
         }
         inOrderRecord(node.left, sorted, idx, steps, primaryArray);
-        sorted[idx[0]] = node.val;
+        int sortedIndex = idx[0];
+        sorted[sortedIndex] = node.val;
         idx[0]++;
-        recordStep(steps, primaryArray, sorted, 2, 0);
+        recordStep(steps, primaryArray, sorted, 2, 0, null, new int[] {sortedIndex});
         inOrderRecord(node.right, sorted, idx, steps, primaryArray);
     }
 
@@ -879,7 +1012,6 @@ public class visualizer extends JPanel {
                 lines.add("if (left >= right) return;");
                 lines.add("int mid = left + (right - left) / 2;");
                 lines.add("mergeSort(left, mid);");
-                lines.add("mergeSort(left, mid);");
                 lines.add("mergeSort(mid + 1, right);");
                 lines.add("merge(left, mid, right);");
                 lines.add("return;");
@@ -927,7 +1059,15 @@ public class visualizer extends JPanel {
         if (dualStorageMode && requiresAuxStorage(selectedAlgorithm)) {
             drawDualArrays(g2d, width, height);
         } else {
-            drawArrayTrack(g2d, currentArray, s(8), Math.max(s(20), height - s(16)), new Color(70, 130, 180), "Primary Array");
+            drawArrayTrack(
+                g2d,
+                currentArray,
+                s(8),
+                Math.max(s(20), height - s(16)),
+                new Color(70, 130, 180),
+                "Primary Array",
+                currentSelectedPrimary
+            );
         }
     }
 
@@ -940,14 +1080,30 @@ public class visualizer extends JPanel {
 
         int[] auxToDraw = currentAuxArray != null ? currentAuxArray : createEmptyAuxArray(currentArray.length);
 
-        drawArrayTrack(g2d, currentArray, topY, eachTrackHeight, new Color(70, 130, 180), "Primary Array");
-        drawArrayTrack(g2d, auxToDraw, bottomY, eachTrackHeight, new Color(230, 125, 50), "Auxiliary Array (O(2n) storage)");
+        drawArrayTrack(g2d, currentArray, topY, eachTrackHeight, new Color(70, 130, 180), "Primary Array", currentSelectedPrimary);
+        drawArrayTrack(
+            g2d,
+            auxToDraw,
+            bottomY,
+            eachTrackHeight,
+            new Color(230, 125, 50),
+            "Auxiliary Array (O(2n) storage)",
+            currentSelectedAux
+        );
 
         g2d.setColor(new Color(80, 80, 80));
         g2d.drawLine(s(6), bottomY - (gap / 2), width - s(6), bottomY - (gap / 2));
     }
 
-    private void drawArrayTrack(Graphics2D g2d, int[] values, int yStart, int trackHeight, Color fillColor, String label) {
+    private void drawArrayTrack(
+        Graphics2D g2d,
+        int[] values,
+        int yStart,
+        int trackHeight,
+        Color fillColor,
+        String label,
+        int[] selectedIndices
+    ) {
         int width = visualPanel.getWidth();
         int labelSpace = s(14);
         int valuesY = yStart + labelSpace;
@@ -965,13 +1121,14 @@ public class visualizer extends JPanel {
             int x = startX + i * barWidth;
             int slotWidth = Math.max(1, barWidth - s(2));
             int val = values[i];
+            boolean selected = isSelectedIndex(selectedIndices, i);
 
             if (val == AUX_EMPTY) {
                 int slotHeight = Math.max(s(3), valuesHeight / 8);
                 int y = valuesY + valuesHeight - slotHeight;
                 g2d.setColor(new Color(229, 229, 229));
                 g2d.fillRect(x, y, slotWidth, slotHeight);
-                g2d.setColor(new Color(180, 180, 180));
+                g2d.setColor(selected ? new Color(255, 99, 71) : new Color(180, 180, 180));
                 g2d.drawRect(x, y, slotWidth, slotHeight);
                 continue;
             }
@@ -980,7 +1137,7 @@ public class visualizer extends JPanel {
             barHeight = Math.max(s(1), barHeight);
             int y = valuesY + valuesHeight - barHeight;
 
-            g2d.setColor(fillColor);
+            g2d.setColor(selected ? new Color(255, 99, 71) : fillColor);
             g2d.fillRect(x, y, slotWidth, barHeight);
             g2d.setColor(Color.BLACK);
             g2d.drawRect(x, y, slotWidth, barHeight);
@@ -994,6 +1151,18 @@ public class visualizer extends JPanel {
                 g2d.drawString(valueText, tx, ty);
             }
         }
+    }
+
+    private boolean isSelectedIndex(int[] selectedIndices, int index) {
+        if (!selectedHighlightMode || selectedIndices == null) {
+            return false;
+        }
+        for (int selected : selectedIndices) {
+            if (selected == index) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private int getMaxValue(int[] array) {
