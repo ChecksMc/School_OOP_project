@@ -34,7 +34,7 @@ public class main {
                 frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
             }
 
-            // Only add Visualizer tab (removed Comparator)
+            
             frame.add(new visualizer());
             frame.setVisible(true);
         });

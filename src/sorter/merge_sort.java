@@ -23,25 +23,25 @@ public class merge_sort extends sorter {
         if (left < right) {
             int mid = left + (right - left) / 2;
 
-            // Sort first and second halves
+            
             mergeSort(array, left, mid);
             mergeSort(array, mid + 1, right);
 
-            // Merge the sorted halves
+            
             merge(array, left, mid, right);
         }
     }
 
     private void merge(int[] array, int left, int mid, int right) {
-        // Find sizes of two subarrays to be merged
+        
         int n1 = mid - left + 1;
         int n2 = right - mid;
 
-        // Create temp arrays
+        
         int[] leftArray = new int[n1];
         int[] rightArray = new int[n2];
 
-        // Copy data to temp arrays
+        
         for (int i = 0; i < n1; i++) {
             leftArray[i] = array[left + i];
         }
@@ -49,7 +49,7 @@ public class merge_sort extends sorter {
             rightArray[j] = array[mid + 1 + j];
         }
 
-        // Merge the temp arrays
+        
         int i = 0, j = 0;
         int k = left;
 
@@ -64,7 +64,7 @@ public class merge_sort extends sorter {
             k++;
         }
 
-        // Copy remaining elements
+        
         while (i < n1) {
             array[k] = leftArray[i];
             i++;

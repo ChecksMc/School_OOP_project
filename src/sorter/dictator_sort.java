@@ -13,7 +13,7 @@ public class dictator_sort extends sorter {
     public int[] solve() {
         int[] array = arr.get_array();
 
-        // Dictator sort: the first element decides all values.
+        
         if (array.length == 0) {
             return array;
         }

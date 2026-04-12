@@ -32,17 +32,17 @@ public class tree_sort extends sorter {
             return array;
         }
 
-        // Build binary search tree
+        
         root = null;
         for (int value : array) {
             root = insert(root, value);
         }
 
-        // Perform in-order traversal to get sorted array
+        
         int[] sortedArray = new int[n];
         inOrderTraversal(root, sortedArray, new int[] { 0 });
 
-        // Copy sorted values back to original array
+        
         System.arraycopy(sortedArray, 0, array, 0, n);
 
         return array;
@@ -67,14 +67,14 @@ public class tree_sort extends sorter {
             return;
         }
 
-        // Traverse left subtree
+        
         inOrderTraversal(node.left, array, index);
 
-        // Visit node
+        
         array[index[0]] = node.value;
         index[0]++;
 
-        // Traverse right subtree
+        
         inOrderTraversal(node.right, array, index);
     }
 }

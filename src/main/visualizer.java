@@ -2,9 +2,9 @@ package main;
 
 import javax.swing.*;
 import javax.swing.text.BadLocationException;
-import javax.sound.sampled.AudioFormat;
+import javax.sound.sampled.AudioInputStream;
 import javax.sound.sampled.AudioSystem;
-import javax.sound.sampled.SourceDataLine;
+import javax.sound.sampled.Clip;
 import java.awt.*;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -19,11 +19,12 @@ public class visualizer extends JPanel {
     private static final int AUX_EMPTY = Integer.MIN_VALUE;
     private static final int[] NO_SELECTION = new int[0];
     private static final long POP_MIN_INTERVAL_NS = 25_000_000L;
-    private static final AudioFormat POP_FORMAT = new AudioFormat(22_050f, 8, 1, true, false);
-    private static final byte[] POP_SAMPLE = createPopSample();
+    private static Clip popClip = null;
+    private static final Color BTN_DARK = new Color(48, 48, 48);
+    private static final Color BTN_DARK_SELECTED = new Color(76, 76, 76);
     private static final String[] ALGORITHMS = {
-        "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort",
-        "Miracle Sort", "Bogosort", "Dictator Sort", "Thanos Sort", "Intelligent Design Sort"
+            "Bubble Sort", "Insertion Sort", "Selection Sort", "Merge Sort", "Tree Sort",
+            "Miracle Sort", "Bogosort", "Dictator Sort", "Thanos Sort"
     };
 
     private JTextField inputField;
@@ -86,29 +87,38 @@ public class visualizer extends JPanel {
         return Math.max(1, base * UI_SCALE);
     }
 
-    private static byte[] createPopSample() {
-        int length = 1400;
-        byte[] sample = new byte[length];
-        for (int i = 0; i < length; i++) {
-            double t = i / (double) length;
-            double env = Math.exp(-8.0 * t);
-            double wave = Math.sin(2.0 * Math.PI * 200.0 * t) + 0.35 * (Math.random() * 2.0 - 1.0);
-            int v = (int) (env * wave * 110.0);
-            if (v > 127) {
-                v = 127;
-            } else if (v < -128) {
-                v = -128;
+    
+    
+    private static void loadPopClip() {
+        if (popClip != null)
+            return;
+        try {
+            
+            java.net.URL soundURL = visualizer.class.getResource("/main/Pop.wav");
+            if (soundURL == null) {
+                
+                java.io.File file = new java.io.File("src/main/Pop.wav");
+                if (file.exists()) {
+                    soundURL = file.toURI().toURL();
+                }
             }
-            sample[i] = (byte) v;
+            if (soundURL != null) {
+                AudioInputStream audioIn = AudioSystem.getAudioInputStream(soundURL);
+                popClip = AudioSystem.getClip();
+                popClip.open(audioIn);
+            }
+        } catch (Exception e) {
+            popClip = null;
         }
-        return sample;
     }
 
     public visualizer() {
         setLayout(new BorderLayout(s(10), s(10)));
+        setBackground(Color.BLACK);
         setBorder(BorderFactory.createEmptyBorder(s(10), s(10), s(10), s(10)));
 
         JPanel topPanel = new JPanel(new BorderLayout(s(8), s(8)));
+        topPanel.setBackground(Color.BLACK);
         topPanel.add(createInputPanel(), BorderLayout.NORTH);
         topPanel.add(createModePanel(), BorderLayout.SOUTH);
         add(topPanel, BorderLayout.NORTH);
@@ -116,9 +126,13 @@ public class visualizer extends JPanel {
         codeArea = new JTextArea();
         codeArea.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
         codeArea.setEditable(false);
+        codeArea.setBackground(Color.BLACK);
+        codeArea.setForeground(Color.WHITE);
         codeArea.setBorder(BorderFactory.createEmptyBorder(s(6), s(6), s(6), s(6)));
         JScrollPane codeScroll = new JScrollPane(codeArea);
         codeScroll.setPreferredSize(new Dimension(s(300), s(220)));
+        codeScroll.getVerticalScrollBar().setUnitIncrement(16);
+        codeScroll.getHorizontalScrollBar().setUnitIncrement(16);
 
         add(createAlgorithmSelectionPanel(), BorderLayout.WEST);
 
@@ -129,14 +143,15 @@ public class visualizer extends JPanel {
                 drawArray(g);
             }
         };
-        visualPanel.setBackground(Color.WHITE);
-        visualPanel.setBorder(BorderFactory.createLineBorder(new Color(45, 45, 45), s(1)));
+        visualPanel.setBackground(Color.BLACK);
+        visualPanel.setBorder(BorderFactory.createLineBorder(new Color(100, 100, 100), s(1)));
         add(visualPanel, BorderLayout.CENTER);
 
         add(codeScroll, BorderLayout.EAST);
 
         statusLabel = new JLabel("Enter an array, pick an algorithm card, then sort.");
         statusLabel.setFont(new Font("SansSerif", Font.BOLD, f(14)));
+        statusLabel.setForeground(Color.WHITE);
         add(statusLabel, BorderLayout.SOUTH);
 
         updateStorageModeButton();
@@ -157,7 +172,8 @@ public class visualizer extends JPanel {
         return 20 + ((100 - speed) * 10);
     }
 
-    public void loadScenario(String algorithm, int[] sourceArray, boolean startInStepMode, boolean preferDualStorageView) {
+    public void loadScenario(String algorithm, int[] sourceArray, boolean startInStepMode,
+            boolean preferDualStorageView) {
         if (sourceArray == null || sourceArray.length == 0) {
             return;
         }
@@ -198,21 +214,31 @@ public class visualizer extends JPanel {
 
     private JPanel createInputPanel() {
         JPanel inputPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, s(8), s(4)));
+        inputPanel.setBackground(Color.BLACK);
 
         JLabel inputLabel = new JLabel("Array (comma-separated):");
         inputLabel.setFont(new Font("SansSerif", Font.BOLD, f(12)));
+        inputLabel.setForeground(Color.WHITE);
 
         inputField = new JTextField("5,3,8,1,9,2,7,4,6", 24);
         inputField.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+        inputField.setBackground(new Color(40, 40, 40));
+        inputField.setForeground(Color.WHITE);
+        inputField.setCaretColor(Color.WHITE);
 
         JLabel randomLabel = new JLabel("Random Size:");
         randomLabel.setFont(new Font("SansSerif", Font.BOLD, f(12)));
+        randomLabel.setForeground(Color.WHITE);
 
         randomSizeField = new JTextField("20", 4);
         randomSizeField.setFont(new Font("Monospaced", Font.PLAIN, f(12)));
+        randomSizeField.setBackground(new Color(40, 40, 40));
+        randomSizeField.setForeground(Color.WHITE);
+        randomSizeField.setCaretColor(Color.WHITE);
 
         randomArrayButton = new JButton("Generate Random");
-        styleActionButton(randomArrayButton, new Color(50, 112, 201));
+        randomArrayButton.setForeground(Color.WHITE);
+        styleActionButton(randomArrayButton, new Color(95, 95, 95));
         randomArrayButton.addActionListener(e -> generateRandomArray());
 
         inputPanel.add(inputLabel);
@@ -248,29 +274,42 @@ public class visualizer extends JPanel {
 
     private JPanel createModePanel() {
         JPanel modePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, s(6), s(4)));
+        modePanel.setBackground(Color.BLACK);
 
         instantButton = new JButton("I");
+        instantButton.setForeground(Color.WHITE);
         stepButton = new JButton("M");
+        stepButton.setForeground(Color.WHITE);
         resetButton = new JButton("R");
+        resetButton.setForeground(Color.WHITE);
         nextButton = new JButton("N");
+        nextButton.setForeground(Color.WHITE);
         stepIntoButton = new JButton("T");
+        stepIntoButton.setForeground(Color.WHITE);
         stepOverButton = new JButton("O");
+        stepOverButton.setForeground(Color.WHITE);
         stepOutButton = new JButton("U");
+        stepOutButton.setForeground(Color.WHITE);
         playButton = new JButton("P");
+        playButton.setForeground(Color.WHITE);
         storageModeButton = new JButton();
+        storageModeButton.setForeground(Color.WHITE);
         selectedModeButton = new JButton();
+        selectedModeButton.setForeground(Color.WHITE);
         stepSpeedSlider = new JSlider(1, 100, 50);
+        stepSpeedSlider.setBackground(Color.BLACK);
+        stepSpeedSlider.setForeground(Color.WHITE);
 
-        styleActionButton(instantButton, new Color(45, 124, 246));
-        styleActionButton(stepButton, new Color(0, 144, 115));
-        styleActionButton(nextButton, new Color(238, 149, 0));
-        styleActionButton(playButton, new Color(157, 95, 255));
-        styleActionButton(stepIntoButton, new Color(34, 139, 34));
-        styleActionButton(stepOverButton, new Color(85, 107, 47));
-        styleActionButton(stepOutButton, new Color(184, 134, 11));
-        styleActionButton(storageModeButton, new Color(73, 108, 188));
-        styleActionButton(selectedModeButton, new Color(205, 95, 32));
-        styleActionButton(resetButton, new Color(189, 44, 44));
+        styleActionButton(instantButton, new Color(105, 105, 105));
+        styleActionButton(stepButton, new Color(110, 110, 110));
+        styleActionButton(nextButton, new Color(115, 115, 115));
+        styleActionButton(playButton, new Color(120, 120, 120));
+        styleActionButton(stepIntoButton, new Color(98, 98, 98));
+        styleActionButton(stepOverButton, new Color(102, 102, 102));
+        styleActionButton(stepOutButton, new Color(108, 108, 108));
+        styleActionButton(storageModeButton, new Color(112, 112, 112));
+        styleActionButton(selectedModeButton, new Color(118, 118, 118));
+        styleActionButton(resetButton, new Color(90, 90, 90));
 
         configureCompactModeButton(instantButton, "Instant Sort");
         configureCompactModeButton(stepButton, "Start Step Mode");
@@ -285,6 +324,7 @@ public class visualizer extends JPanel {
 
         stepSpeedSlider.setPreferredSize(new Dimension(s(120), s(24)));
         stepSpeedSlider.setToolTipText("Step speed");
+        stepSpeedSlider.setOpaque(false);
         stepSpeedSlider.addChangeListener(e -> {
             if (playTimer != null) {
                 playTimer.setDelay(stepDelayFromSlider());
@@ -297,6 +337,8 @@ public class visualizer extends JPanel {
         stepOutButton.setEnabled(false);
         playButton.setEnabled(false);
 
+        JLabel speedLabel = new JLabel("v");
+        speedLabel.setForeground(Color.WHITE);
         modePanel.add(instantButton);
         modePanel.add(stepButton);
         modePanel.add(nextButton);
@@ -304,7 +346,7 @@ public class visualizer extends JPanel {
         modePanel.add(stepOverButton);
         modePanel.add(stepOutButton);
         modePanel.add(playButton);
-        modePanel.add(new JLabel("v"));
+        modePanel.add(speedLabel);
         modePanel.add(stepSpeedSlider);
         modePanel.add(storageModeButton);
         modePanel.add(selectedModeButton);
@@ -333,12 +375,15 @@ public class visualizer extends JPanel {
 
     private JPanel createAlgorithmSelectionPanel() {
         JPanel shell = new JPanel(new BorderLayout(s(4), s(4)));
+        shell.setBackground(Color.BLACK);
         shell.setPreferredSize(new Dimension(s(140), s(320)));
 
         JLabel title = new JLabel("Algorithm Selection");
         title.setFont(new Font("SansSerif", Font.BOLD, f(14)));
+        title.setForeground(Color.WHITE);
 
         JPanel cardPanel = new JPanel(new GridLayout(0, 1, s(3), s(3)));
+        cardPanel.setBackground(Color.BLACK);
         cardPanel.setBorder(BorderFactory.createEmptyBorder(s(2), 0, 0, 0));
 
         ButtonGroup group = new ButtonGroup();
@@ -351,7 +396,6 @@ public class visualizer extends JPanel {
         addAlgorithmCard(cardPanel, group, "Bogosort", "Random shuffle until sorted");
         addAlgorithmCard(cardPanel, group, "Dictator Sort", "Copies first value to all");
         addAlgorithmCard(cardPanel, group, "Thanos Sort", "Snaps array repeatedly");
-        addAlgorithmCard(cardPanel, group, "Intelligent Design Sort", "Selection-like deterministic");
 
         JToggleButton defaultButton = algorithmButtons.get(selectedAlgorithm);
         if (defaultButton != null) {
@@ -362,7 +406,40 @@ public class visualizer extends JPanel {
 
         JScrollPane cardScroll = new JScrollPane(cardPanel);
         cardScroll.setBorder(BorderFactory.createEmptyBorder());
+        cardScroll.setBackground(Color.BLACK);
+        cardScroll.getViewport().setBackground(Color.BLACK);
+        cardScroll.setOpaque(true);
+        cardScroll.getViewport().setOpaque(true);
+        cardScroll.getVerticalScrollBar().setUnitIncrement(16);
         cardScroll.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        cardScroll.getVerticalScrollBar().setBackground(Color.BLACK);
+        cardScroll.getHorizontalScrollBar().setBackground(Color.BLACK);
+        cardScroll.getVerticalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = new Color(32, 32, 32);
+                this.trackColor = Color.BLACK;
+                this.thumbDarkShadowColor = Color.BLACK;
+                this.thumbHighlightColor = Color.DARK_GRAY;
+                this.thumbLightShadowColor = Color.DARK_GRAY;
+            }
+        });
+        cardScroll.getHorizontalScrollBar().setUI(new javax.swing.plaf.basic.BasicScrollBarUI() {
+            @Override
+            protected void configureScrollBarColors() {
+                this.thumbColor = new Color(32, 32, 32);
+                this.trackColor = Color.BLACK;
+                this.thumbDarkShadowColor = Color.BLACK;
+                this.thumbHighlightColor = Color.DARK_GRAY;
+                this.thumbLightShadowColor = Color.DARK_GRAY;
+            }
+        });
+        cardPanel.setForeground(Color.WHITE);
+        for (Component c : cardPanel.getComponents()) {
+            if (c instanceof JToggleButton) {
+                c.setForeground(Color.WHITE);
+            }
+        }
 
         shell.add(title, BorderLayout.NORTH);
         shell.add(cardScroll, BorderLayout.CENTER);
@@ -370,18 +447,25 @@ public class visualizer extends JPanel {
     }
 
     private void addAlgorithmCard(JPanel panel, ButtonGroup group, String algorithm, String description) {
-        String text = "<html><div style='padding:" + s(2) + "px'><b>" + algorithm + "</b><br/>" + description + "</div></html>";
+        String text = "<html><div style='padding:" + s(2) + "px'><b>" + algorithm + "</b><br/>" + description
+                + "</div></html>";
         JToggleButton card = new JToggleButton(text);
         card.setHorizontalAlignment(SwingConstants.LEFT);
         card.setFocusPainted(false);
         card.setFont(new Font("SansSerif", Font.PLAIN, f(11)));
+        
+        card.setOpaque(true);
+        card.setContentAreaFilled(true);
+        card.setBackground(BTN_DARK);
+        card.setForeground(Color.WHITE);
         card.setMargin(new Insets(s(2), s(3), s(2), s(3)));
         card.addActionListener(e -> {
             selectedAlgorithm = algorithm;
             updateAlgorithmCardStyles();
             updateCodeArea();
             if (originalArray != null) {
-                currentAuxArray = requiresAuxStorage(selectedAlgorithm) ? createEmptyAuxArray(originalArray.length) : null;
+                currentAuxArray = requiresAuxStorage(selectedAlgorithm) ? createEmptyAuxArray(originalArray.length)
+                        : null;
             }
             currentSelectedPrimary = NO_SELECTION;
             currentSelectedAux = NO_SELECTION;
@@ -396,19 +480,24 @@ public class visualizer extends JPanel {
     private void updateAlgorithmCardStyles() {
         for (Map.Entry<String, JToggleButton> entry : algorithmButtons.entrySet()) {
             boolean selected = entry.getValue().isSelected();
-            entry.getValue().setBackground(selected ? new Color(28, 122, 255) : new Color(240, 240, 240));
-            entry.getValue().setForeground(selected ? Color.WHITE : new Color(30, 30, 30));
+            entry.getValue().setOpaque(true);
+            entry.getValue().setContentAreaFilled(true);
+            entry.getValue().setBackground(selected ? BTN_DARK_SELECTED : BTN_DARK);
+            entry.getValue().setForeground(Color.WHITE);
             entry.getValue().setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(selected ? new Color(15, 86, 190) : new Color(188, 188, 188), s(1)),
-                BorderFactory.createEmptyBorder(s(1), s(1), s(1), s(1))
-            ));
+                    BorderFactory.createLineBorder(selected ? new Color(110, 110, 110) : new Color(70, 70, 70), s(1)),
+                    BorderFactory.createEmptyBorder(s(1), s(1), s(1), s(1))));
         }
     }
 
     private void styleActionButton(JButton button, Color bg) {
         button.setFocusPainted(false);
         button.setFont(new Font("SansSerif", Font.BOLD, f(12)));
-        button.setBackground(bg);
+        
+        button.setBackground(BTN_DARK);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
         button.setForeground(Color.WHITE);
         button.setMargin(new Insets(s(2), s(3), s(2), s(3)));
     }
@@ -437,15 +526,16 @@ public class visualizer extends JPanel {
         selectedHighlightMode = !selectedHighlightMode;
         updateSelectedModeButton();
         statusLabel.setText(selectedHighlightMode
-            ? "Selected mode ON: inspected indices are highlighted."
-            : "Selected mode OFF.");
+                ? "Selected mode ON: inspected indices are highlighted."
+                : "Selected mode OFF.");
         visualPanel.repaint();
     }
 
     private void updateSelectedModeButton() {
         if (selectedModeButton != null) {
             selectedModeButton.setText("H");
-            selectedModeButton.setToolTipText(selectedHighlightMode ? "Highlight Selected: On" : "Highlight Selected: Off");
+            selectedModeButton
+                    .setToolTipText(selectedHighlightMode ? "Highlight Selected: On" : "Highlight Selected: Off");
         }
     }
 
@@ -541,8 +631,10 @@ public class visualizer extends JPanel {
         }
 
         int[] previousArray = currentArray != null ? currentArray.clone() : sortSteps.get(stepIndex).clone();
+        int[] previousAuxArray = currentAuxArray != null ? currentAuxArray.clone() : getAuxStep(stepIndex);
         int[] nextArray = sortSteps.get(stepIndex + 1);
-        maybePlaySwapPop(previousArray, nextArray);
+        int[] nextAuxArray = getAuxStep(stepIndex + 1);
+        maybePlayActionPop(previousArray, nextArray, previousAuxArray, nextAuxArray);
 
         stepIndex++;
         currentArray = nextArray.clone();
@@ -595,9 +687,15 @@ public class visualizer extends JPanel {
             j = sortSteps.size() - 1;
         }
 
+        int[] previousArray = currentArray != null ? currentArray.clone() : sortSteps.get(stepIndex).clone();
+        int[] previousAuxArray = currentAuxArray != null ? currentAuxArray.clone() : getAuxStep(stepIndex);
+        int[] nextArray = sortSteps.get(j);
+        int[] nextAuxArray = getAuxStep(j);
+        maybePlayActionPop(previousArray, nextArray, previousAuxArray, nextAuxArray);
+
         stepIndex = j;
-        currentArray = sortSteps.get(stepIndex).clone();
-        currentAuxArray = getAuxStep(stepIndex);
+        currentArray = nextArray.clone();
+        currentAuxArray = nextAuxArray;
         currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
         currentSelectedAux = getSelectedAuxStep(stepIndex);
 
@@ -640,9 +738,15 @@ public class visualizer extends JPanel {
             j = sortSteps.size() - 1;
         }
 
+        int[] previousArray = currentArray != null ? currentArray.clone() : sortSteps.get(stepIndex).clone();
+        int[] previousAuxArray = currentAuxArray != null ? currentAuxArray.clone() : getAuxStep(stepIndex);
+        int[] nextArray = sortSteps.get(j);
+        int[] nextAuxArray = getAuxStep(j);
+        maybePlayActionPop(previousArray, nextArray, previousAuxArray, nextAuxArray);
+
         stepIndex = j;
-        currentArray = sortSteps.get(stepIndex).clone();
-        currentAuxArray = getAuxStep(stepIndex);
+        currentArray = nextArray.clone();
+        currentAuxArray = nextAuxArray;
         currentSelectedPrimary = getSelectedPrimaryStep(stepIndex);
         currentSelectedAux = getSelectedAuxStep(stepIndex);
 
@@ -688,8 +792,8 @@ public class visualizer extends JPanel {
         codeDepths = null;
         currentArray = originalArray != null ? originalArray.clone() : null;
         currentAuxArray = originalArray != null && requiresAuxStorage(selectedAlgorithm)
-            ? createEmptyAuxArray(originalArray.length)
-            : null;
+                ? createEmptyAuxArray(originalArray.length)
+                : null;
         currentSelectedPrimary = NO_SELECTION;
         currentSelectedAux = NO_SELECTION;
 
@@ -705,42 +809,25 @@ public class visualizer extends JPanel {
         visualPanel.repaint();
     }
 
-    private void maybePlaySwapPop(int[] before, int[] after) {
-        if (before == null || after == null) {
-            return;
-        }
-        if (isSwapStep(before, after)) {
+    private void maybePlayActionPop(int[] beforePrimary, int[] afterPrimary, int[] beforeAux, int[] afterAux) {
+        if (arraysDiffer(beforePrimary, afterPrimary) || arraysDiffer(beforeAux, afterAux)) {
             playPopSound();
         }
     }
 
-    private boolean isSwapStep(int[] before, int[] after) {
-        if (before.length != after.length) {
-            return false;
+    private boolean arraysDiffer(int[] first, int[] second) {
+        if (first == null || second == null) {
+            return first != second;
         }
-
-        int first = -1;
-        int second = -1;
-        int diffCount = 0;
-        for (int i = 0; i < before.length; i++) {
-            if (before[i] != after[i]) {
-                if (diffCount == 0) {
-                    first = i;
-                } else if (diffCount == 1) {
-                    second = i;
-                }
-                diffCount++;
-                if (diffCount > 2) {
-                    return false;
-                }
+        if (first.length != second.length) {
+            return true;
+        }
+        for (int i = 0; i < first.length; i++) {
+            if (first[i] != second[i]) {
+                return true;
             }
         }
-
-        if (diffCount != 2) {
-            return false;
-        }
-
-        return before[first] == after[second] && before[second] == after[first];
+        return false;
     }
 
     private void playPopSound() {
@@ -752,13 +839,16 @@ public class visualizer extends JPanel {
 
         Thread soundThread = new Thread(() -> {
             try {
-                SourceDataLine line = AudioSystem.getSourceDataLine(POP_FORMAT);
-                line.open(POP_FORMAT, POP_SAMPLE.length);
-                line.start();
-                line.write(POP_SAMPLE, 0, POP_SAMPLE.length);
-                line.drain();
-                line.stop();
-                line.close();
+                loadPopClip();
+                if (popClip != null) {
+                    if (popClip.isRunning()) {
+                        popClip.stop();
+                    }
+                    popClip.setFramePosition(0);
+                    popClip.start();
+                } else {
+                    Toolkit.getDefaultToolkit().beep();
+                }
             } catch (Exception ex) {
                 Toolkit.getDefaultToolkit().beep();
             }
@@ -785,8 +875,8 @@ public class visualizer extends JPanel {
             }
 
             currentAuxArray = requiresAuxStorage(selectedAlgorithm)
-                ? createEmptyAuxArray(parts.length)
-                : null;
+                    ? createEmptyAuxArray(parts.length)
+                    : null;
             currentSelectedPrimary = NO_SELECTION;
             currentSelectedAux = NO_SELECTION;
 
@@ -819,8 +909,6 @@ public class visualizer extends JPanel {
                 return new dictator_sort(sortArray);
             case "Thanos Sort":
                 return new thanos_sort(sortArray);
-            case "Intelligent Design Sort":
-                return new intelligent_design_sort(sortArray);
             default:
                 return new bubble_sort(sortArray);
         }
@@ -875,14 +963,13 @@ public class visualizer extends JPanel {
     }
 
     private void recordStep(
-        List<int[]> steps,
-        int[] primary,
-        int[] secondary,
-        int codeLineIndex,
-        int depth,
-        int[] selectedPrimary,
-        int[] selectedAux
-    ) {
+            List<int[]> steps,
+            int[] primary,
+            int[] secondary,
+            int codeLineIndex,
+            int depth,
+            int[] selectedPrimary,
+            int[] selectedAux) {
         steps.add(primary.clone());
         auxSteps.add(secondary == null ? null : secondary.clone());
         selectedPrimarySteps.add(cloneSelection(selectedPrimary));
@@ -904,9 +991,9 @@ public class visualizer extends JPanel {
     private void generateBubbleSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
-            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
+            recordStep(steps, array, null, 1, 0, new int[] { i }, null);
             for (int j = 0; j < n - i - 1; j++) {
-                int[] inspected = new int[] {j, j + 1};
+                int[] inspected = new int[] { j, j + 1 };
                 recordStep(steps, array, null, 2, 0, inspected, null);
                 recordStep(steps, array, null, 3, 0, inspected, null);
                 if (array[j] > array[j + 1]) {
@@ -923,69 +1010,69 @@ public class visualizer extends JPanel {
     private void generateInsertionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 1; i < n; i++) {
-            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
+            recordStep(steps, array, null, 1, 0, new int[] { i }, null);
             int key = array[i];
-            recordStep(steps, array, null, 2, 0, new int[] {i}, null);
+            recordStep(steps, array, null, 2, 0, new int[] { i }, null);
             int j = i - 1;
-            recordStep(steps, array, null, 3, 0, new int[] {j}, null);
+            recordStep(steps, array, null, 3, 0, new int[] { j }, null);
             while (j >= 0 && array[j] > key) {
-                recordStep(steps, array, null, 4, 0, new int[] {j, j + 1}, null);
+                recordStep(steps, array, null, 4, 0, new int[] { j, j + 1 }, null);
                 array[j + 1] = array[j];
-                recordStep(steps, array, null, 5, 0, new int[] {j + 1}, null);
+                recordStep(steps, array, null, 5, 0, new int[] { j + 1 }, null);
                 j = j - 1;
-                recordStep(steps, array, null, 6, 0, new int[] {Math.max(0, j)}, null);
+                recordStep(steps, array, null, 6, 0, new int[] { Math.max(0, j) }, null);
             }
             array[j + 1] = key;
-            recordStep(steps, array, null, 8, 0, new int[] {j + 1}, null);
+            recordStep(steps, array, null, 8, 0, new int[] { j + 1 }, null);
         }
     }
 
     private void generateSelectionSortSteps(int[] array, List<int[]> steps) {
         int n = array.length;
         for (int i = 0; i < n - 1; i++) {
-            recordStep(steps, array, null, 1, 0, new int[] {i}, null);
+            recordStep(steps, array, null, 1, 0, new int[] { i }, null);
             int minIndex = i;
-            recordStep(steps, array, null, 2, 0, new int[] {minIndex}, null);
+            recordStep(steps, array, null, 2, 0, new int[] { minIndex }, null);
             for (int j = i + 1; j < n; j++) {
-                recordStep(steps, array, null, 3, 0, new int[] {j, minIndex}, null);
+                recordStep(steps, array, null, 3, 0, new int[] { j, minIndex }, null);
                 if (array[j] < array[minIndex]) {
                     minIndex = j;
-                    recordStep(steps, array, null, 5, 0, new int[] {minIndex}, null);
+                    recordStep(steps, array, null, 5, 0, new int[] { minIndex }, null);
                 }
             }
             if (minIndex != i) {
-                recordStep(steps, array, null, 8, 0, new int[] {i, minIndex}, null);
+                recordStep(steps, array, null, 8, 0, new int[] { i, minIndex }, null);
                 int temp = array[i];
                 array[i] = array[minIndex];
                 array[minIndex] = temp;
-                recordStep(steps, array, null, 11, 0, new int[] {i, minIndex}, null);
+                recordStep(steps, array, null, 11, 0, new int[] { i, minIndex }, null);
             }
         }
     }
 
     private void generateMergeSortSteps(int[] array, List<int[]> steps) {
         if (array.length <= 1) {
-            recordStep(steps, array, createEmptyAuxArray(array.length), 0, 0, new int[] {0}, null);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 0, 0, new int[] { 0 }, null);
             return;
         }
         mergeSortRec(array, 0, array.length - 1, steps, 0);
     }
 
     private void mergeSortRec(int[] array, int left, int right, List<int[]> steps, int depth) {
-        recordStep(steps, array, createEmptyAuxArray(array.length), 1, depth, new int[] {left, right}, null);
+        recordStep(steps, array, createEmptyAuxArray(array.length), 1, depth, new int[] { left, right }, null);
         if (left < right) {
             int mid = left + (right - left) / 2;
 
-            recordStep(steps, array, createEmptyAuxArray(array.length), 3, depth, new int[] {left, mid}, null);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 3, depth, new int[] { left, mid }, null);
             mergeSortRec(array, left, mid, steps, depth + 1);
 
-            recordStep(steps, array, createEmptyAuxArray(array.length), 4, depth, new int[] {mid + 1, right}, null);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 4, depth, new int[] { mid + 1, right }, null);
             mergeSortRec(array, mid + 1, right, steps, depth + 1);
 
             mergeWithRecording(array, left, mid, right, steps, depth);
-            recordStep(steps, array, createEmptyAuxArray(array.length), 6, depth, new int[] {left, right}, null);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 6, depth, new int[] { left, right }, null);
         } else {
-            recordStep(steps, array, createEmptyAuxArray(array.length), 0, depth, new int[] {left}, null);
+            recordStep(steps, array, createEmptyAuxArray(array.length), 0, depth, new int[] { left }, null);
         }
     }
 
@@ -1014,12 +1101,15 @@ public class visualizer extends JPanel {
         int j = 0;
         int k = left;
 
-        recordStep(steps, array, auxSnapshot, 8, depth, new int[] {k}, new int[] {left, mid + 1});
+        recordStep(steps, array, auxSnapshot, 8, depth, new int[] { k }, new int[] { left, mid + 1 });
 
         while (i < n1 && j < n2) {
             int leftAuxIndex = left + i;
             int rightAuxIndex = mid + 1 + j;
             int targetIndex = k;
+
+            
+            playPopSound();
 
             if (leftArr[i] <= rightArr[j]) {
                 array[targetIndex] = leftArr[i];
@@ -1031,27 +1121,30 @@ public class visualizer extends JPanel {
                 j++;
             }
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {leftAuxIndex, rightAuxIndex});
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] { targetIndex },
+                    new int[] { leftAuxIndex, rightAuxIndex });
         }
 
         while (i < n1) {
             int auxIndex = left + i;
             int targetIndex = k;
+            playPopSound();
             array[targetIndex] = leftArr[i];
             auxSnapshot[auxIndex] = AUX_EMPTY;
             i++;
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {auxIndex});
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] { targetIndex }, new int[] { auxIndex });
         }
 
         while (j < n2) {
             int auxIndex = mid + 1 + j;
             int targetIndex = k;
+            playPopSound();
             array[targetIndex] = rightArr[j];
             auxSnapshot[auxIndex] = AUX_EMPTY;
             j++;
             k++;
-            recordStep(steps, array, auxSnapshot, 8, depth, new int[] {targetIndex}, new int[] {auxIndex});
+            recordStep(steps, array, auxSnapshot, 8, depth, new int[] { targetIndex }, new int[] { auxIndex });
         }
     }
 
@@ -1062,10 +1155,10 @@ public class visualizer extends JPanel {
         for (int inputIndex = 0; inputIndex < array.length; inputIndex++) {
             int v = array[inputIndex];
             root = insertNode(root, v);
-            recordStep(steps, array, sorted, 1, 0, new int[] {inputIndex}, null);
+            recordStep(steps, array, sorted, 1, 0, new int[] { inputIndex }, null);
         }
 
-        int[] idx = new int[] {0};
+        int[] idx = new int[] { 0 };
         inOrderRecord(root, sorted, idx, steps, array);
 
         int[] auxWorking = sorted.clone();
@@ -1075,7 +1168,7 @@ public class visualizer extends JPanel {
             }
             array[i] = auxWorking[i];
             auxWorking[i] = AUX_EMPTY;
-            recordStep(steps, array, auxWorking, 3, 0, new int[] {i}, new int[] {i});
+            recordStep(steps, array, auxWorking, 3, 0, new int[] { i }, new int[] { i });
         }
     }
 
@@ -1099,7 +1192,7 @@ public class visualizer extends JPanel {
         int sortedIndex = idx[0];
         sorted[sortedIndex] = node.val;
         idx[0]++;
-        recordStep(steps, primaryArray, sorted, 2, 0, null, new int[] {sortedIndex});
+        recordStep(steps, primaryArray, sorted, 2, 0, null, new int[] { sortedIndex });
         inOrderRecord(node.right, sorted, idx, steps, primaryArray);
     }
 
@@ -1194,11 +1287,6 @@ public class visualizer extends JPanel {
                 lines.add("  keep only first half;");
                 lines.add("  copy back and zero-fill;");
                 break;
-            case "Intelligent Design Sort":
-                lines.add("for each i:");
-                lines.add("  find min in remaining;");
-                lines.add("  swap into place;");
-                break;
             default:
                 lines.add("(No line-level pseudocode available for this algorithm)");
                 break;
@@ -1216,7 +1304,7 @@ public class visualizer extends JPanel {
             codeArea.requestFocusInWindow();
             codeArea.select(start, end);
         } catch (BadLocationException e) {
-            // Ignore selection glitches from rapid timer-driven updates.
+            
         }
     }
 
@@ -1235,14 +1323,13 @@ public class visualizer extends JPanel {
             drawDualArrays(g2d, width, height);
         } else {
             drawArrayTrack(
-                g2d,
-                currentArray,
-                s(8),
-                Math.max(s(20), height - s(16)),
-                new Color(70, 130, 180),
-                "Primary Array",
-                currentSelectedPrimary
-            );
+                    g2d,
+                    currentArray,
+                    s(8),
+                    Math.max(s(20), height - s(16)),
+                    new Color(70, 130, 180),
+                    "Primary Array",
+                    currentSelectedPrimary);
         }
     }
 
@@ -1255,36 +1342,35 @@ public class visualizer extends JPanel {
 
         int[] auxToDraw = currentAuxArray != null ? currentAuxArray : createEmptyAuxArray(currentArray.length);
 
-        drawArrayTrack(g2d, currentArray, topY, eachTrackHeight, new Color(70, 130, 180), "Primary Array", currentSelectedPrimary);
+        drawArrayTrack(g2d, currentArray, topY, eachTrackHeight, new Color(70, 130, 180), "Primary Array",
+                currentSelectedPrimary);
         drawArrayTrack(
-            g2d,
-            auxToDraw,
-            bottomY,
-            eachTrackHeight,
-            new Color(230, 125, 50),
-            "Auxiliary Array (O(2n) storage)",
-            currentSelectedAux
-        );
+                g2d,
+                auxToDraw,
+                bottomY,
+                eachTrackHeight,
+                new Color(230, 125, 50),
+                "Auxiliary Array (O(2n) storage)",
+                currentSelectedAux);
 
         g2d.setColor(new Color(80, 80, 80));
         g2d.drawLine(s(6), bottomY - (gap / 2), width - s(6), bottomY - (gap / 2));
     }
 
     private void drawArrayTrack(
-        Graphics2D g2d,
-        int[] values,
-        int yStart,
-        int trackHeight,
-        Color fillColor,
-        String label,
-        int[] selectedIndices
-    ) {
+            Graphics2D g2d,
+            int[] values,
+            int yStart,
+            int trackHeight,
+            Color fillColor,
+            String label,
+            int[] selectedIndices) {
         int width = visualPanel.getWidth();
         int labelSpace = s(14);
         int valuesY = yStart + labelSpace;
         int valuesHeight = Math.max(s(10), trackHeight - s(24));
 
-        g2d.setColor(new Color(32, 32, 32));
+        g2d.setColor(Color.WHITE);
         g2d.setFont(new Font("SansSerif", Font.BOLD, f(10)));
         g2d.drawString(label, s(8), yStart + s(10));
 
@@ -1323,6 +1409,7 @@ public class visualizer extends JPanel {
                 int textWidth = g2d.getFontMetrics().stringWidth(valueText);
                 int tx = x + Math.max(0, (slotWidth - textWidth) / 2);
                 int ty = valuesY + valuesHeight + s(10);
+                g2d.setColor(Color.WHITE);
                 g2d.drawString(valueText, tx, ty);
             }
         }

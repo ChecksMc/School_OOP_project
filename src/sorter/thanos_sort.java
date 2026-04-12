@@ -13,7 +13,7 @@ public class thanos_sort extends sorter {
     public int[] solve() {
         int[] array = arr.get_array();
 
-        // Thanos sort: repeatedly remove half until sorted or size <= 1.
+        
         int[] working = array;
         while (working.length > 1 && !isSorted(working)) {
             int keep = Math.max(1, working.length / 2);
@@ -24,7 +24,7 @@ public class thanos_sort extends sorter {
             working = next;
         }
 
-        // Copy result back into the original array footprint.
+        
         for (int i = 0; i < array.length; i++) {
             if (i < working.length) {
                 array[i] = working[i];

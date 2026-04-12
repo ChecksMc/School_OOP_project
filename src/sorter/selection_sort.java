@@ -14,9 +14,9 @@ public class selection_sort extends sorter {
         int[] array = arr.get_array();
         int n = arr.get_size();
 
-        // Selection sort implementation
+        
         for (int i = 0; i < n - 1; i++) {
-            // Find the minimum element in unsorted portion
+            
             int minIndex = i;
             for (int j = i + 1; j < n; j++) {
                 if (array[j] < array[minIndex]) {
@@ -24,7 +24,7 @@ public class selection_sort extends sorter {
                 }
             }
 
-            // Swap the found minimum element with the first element
+            
             if (minIndex != i) {
                 int temp = array[i];
                 array[i] = array[minIndex];

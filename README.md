@@ -1,6 +1,7 @@
 # Algorithm Visualizer
 This is a school project for OOP.
-## Project requirements
+
+## Project Requirements
 The goal is to implement at least:
 - 5 classes
 - 1 array
@@ -12,20 +13,30 @@ The goal is to implement at least:
 
 ## Current Implementation
 The current project implements these requirements as follows:
-- 5 classes: `sorter`, `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort`, `tree_sort`, `sort_array`, `visualizer`, `comparer`
+- 5+ classes: `sorter`, `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort`, `tree_sort`, `sort_array`, `visualizer`, plus additional sorters: `miracle_sort`, `bogosort`, `dictator_sort`, `thanos_sort`
 - 1 array: `int[] array`
-- 1 inheritance relationship: `sorter` is the parent class of `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort`, and `tree_sort`
+- 1 inheritance relationship: `sorter` is the parent class of all sorting algorithm classes
 - 1 1...1 relationship: `sort_array` has a 1...1 relationship with `sorter`
 - 1 1...* relationship: `visualizer` has a 1...* relationship with `sorter`
 - encapsulation: The classes encapsulate their data and provide public methods for interaction
 - implementation of an appealing project idea: The project visualizes the sorting process of different algorithms, making it an engaging way to learn about sorting algorithms.
+- sound feedback: The visualizer plays a pop sound (Pop.mp3) every time an element is moved during sorting, for an enhanced interactive experience.
+
+
+## Sound Effects
+The visualizer plays a pop sound effect every time an element is moved (swapped or overwritten) during sorting. To enable this feature:
+
+1. Place a `Pop.mp3` file in the `src/main/` directory (or the root directory).
+2. The file must be named exactly `Pop.mp3` (case-sensitive on some systems).
+3. The sound will play automatically during sorting steps if the file is present.
+
+If `Pop.mp3` is missing, the program will fall back to a system beep.
 
 ## Current TODOs
 The implementation is still in progress, and the following tasks are yet to be completed:
-- make the `visualizer` class also have a "select" or "regarding" state.
-- implement the comparer to use the `visualizer`
-- add a `visualizer` extention to add a visualization for sorting algorithms with O(2n) storage complexity, such as tree sort.
-- implement more sorting algorithms, such as miracle sort, bogosort, dictator sort and thanos sort
+- Make the `visualizer` class also have a "select" or "regarding" state.
+- Add support for more interesting visualization styles or algorithm comparisons.
+
 
 ## requirements.txt
 ```
@@ -36,15 +47,16 @@ The implementation is still in progress, and the following tasks are yet to be c
 To run the project, follow these steps:
 1. Ensure you have Java installed on your system.
 2. Compile the Java files in the `src` directory.
-3. Run the `main` class to start the visualizer.
+3. (Optional) Add a `pop.mp3` file to the project root or resources folder for sound effects.
+4. Run the `main` class to start the visualizer.
 
 ## Project structure
 ```
 src/
 ├── main/
-|   └── main.java
-│   └── comparer.java
-|   └── visualizer.java
+│   ├── main.java
+│   ├── visualizer.java
+│   └── Pop.mp3
 ├── dataclass/
 │   └── sort_array.java
 └── sorter/
@@ -53,8 +65,11 @@ src/
     ├── merge_sort.java
     ├── selection_sort.java
     ├── sorter.java
-    └── tree_sort.java
-
+    ├── tree_sort.java
+    ├── miracle_sort.java
+    ├── bogosort.java
+    ├── dictator_sort.java
+    ├── thanos_sort.java
 ```
 
 ## Class Diagram
@@ -93,6 +108,10 @@ direction TB
         +void generateSelectionSortSteps(int[] array, List~int[]~ steps)
         +void generateMergeSortSteps(int[] array, List~int[]~ steps)
         +void generateTreeSortSteps(int[] array, List~int[]~ steps)
+        +void generateMiracleSortSteps(int[] array, List~int[]~ steps)
+        +void generateBogoSortSteps(int[] array, List~int[]~ steps)
+        +void generateDictatorSortSteps(int[] array, List~int[]~ steps)
+        +void generateThanosSortSteps(int[] array, List~int[]~ steps)
         +void drawArray(Graphics g)
     }
 
@@ -143,44 +162,6 @@ direction TB
         -void inOrderTraversal(TreeNode node, int[] array, int[] index)
     }
 
-    class comparer {
-        -int UI_SCALE
-        -String[] ALGORITHMS
-        -JTextField inputField
-        -JTextField arraySizeField
-        -JButton instantCompareButton, randomArrayButton, startStepButton
-        -JButton nextStepButton, playPauseButton, resetStepButton
-        -Map~String,JToggleButton~ algorithmCards
-        -JTable resultTable
-        -DefaultTableModel tableModel
-        -JTextArea statsArea
-        -List~ComparisonResult~ completedResults
-        -List~String~ stepAlgorithms
-        -int[] stepSourceArray
-        -int stepIndex
-        -Timer stepTimer
-        +comparer()
-        +void generateRandomArray()
-        +void runInstantComparison()
-        +void startStepComparison()
-        +void runNextStep()
-        +void toggleStepPlay()
-        +void resetStepMode()
-        +sorter createSorter(String algorithm, sort_array sortArray)
-        +ComparisonResult benchmarkAlgorithm(String algorithm, int[] sourceArray)
-        +void updateSummaryStats(int arraySize, String modeLabel)
-    }
-
-    class ComparisonResult {
-        -String algorithm
-        -double timeMs
-        -String timeText
-        -String comparisons
-        -String status
-        -String detail
-        +ComparisonResult(String algorithm, double timeMs, String comparisons, String status, String detail)
-    }
-
     sorter <|-- bubble_sort : extends
     sorter <|-- selection_sort : extends
     sorter <|-- merge_sort : extends
@@ -193,8 +174,6 @@ direction TB
     insertion_sort *.. sort_array : 1 ... 1
     tree_sort *.. sort_array : 1 ... 2
     visualizer *.. sorter : 1...*
-    comparer *.. sorter : 1...*
-    comparer *.. dataclass.sort_array : 1...*
     visualizer *.. dataclass.sort_array : 1...*
 ```
 
@@ -214,7 +193,7 @@ Das Ziel ist es, mindestens zu implementieren:
 - Umsetzung einer ansprechenden Projektidee
 ## Aktuelle Implementierung
 Die aktuelle Implementierung erfüllt diese Anforderungen wie folgt:
-- 5 Klassen: `sorter`, `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort`, `tree_sort`, `sort_array`, `visualizer`, `comparer`
+- 5 Klassen: `sorter`, `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort`, `tree_sort`, `sort_array`, `visualizer`
 - 1 Array: `int[] array`
 - 1 Vererbungsbeziehung: `sorter` ist die Elternklasse von `bubble_sort`, `selection_sort`, `merge_sort`, `insertion_sort` und `tree_sort`
 - 1 1...1 Beziehung: `sort_array` hat eine 1...1 Beziehung mit `sorter`
@@ -224,8 +203,6 @@ Die aktuelle Implementierung erfüllt diese Anforderungen wie folgt:
 ## Aktuelle TODOs
 Die Implementierung ist noch in Arbeit, und die folgenden Aufgaben müssen noch erledigt werden:
 - Die `visualizer` Klasse soll auch einen "select" oder "regarding" Zustand haben.
-- Implementieren des `comparer`, um den `visualizer` zu verwenden
-- Hinzufügen einer `visualizer` Erweiterung, um eine Visualisierung für Sortieralgorithmen mit O(2n) Speicherkomplexität zu erstellen, wie z.B. Tree Sort.
 - Implementieren weiterer Sortieralgorithmen, wie Miracle Sort, Bogosort, Dictator Sort und Thanos Sort
 ## requirements.txt
 ```
@@ -239,9 +216,9 @@ Um das Projekt auszuführen, folgen Sie diesen Schritten:
 ## Projektstruktur
 ```src/
 ├── main/
-|   └── main.java
-│   └── comparer.java
-|   └── visualizer.java
+│   ├── main.java
+│   ├── visualizer.java
+│   └── Pop.mp3
 ├── dataclass/
 │   └── sort_array.java
 └── sorter/
@@ -250,6 +227,10 @@ Um das Projekt auszuführen, folgen Sie diesen Schritten:
     ├── merge_sort.java
     ├── selection_sort.java
     ├── sorter.java
-    └── tree_sort.java
+    ├── tree_sort.java
+    ├── miracle_sort.java
+    ├── bogosort.java
+    ├── dictator_sort.java
+    └── thanos_sort.java
 ```
 
