@@ -6,6 +6,7 @@ public class thanos_sort extends sorter {
 
     public thanos_sort(sort_array arr) {
         super(arr);
+        this.storageComplexity = "O(n)";
     }
 
     @Override

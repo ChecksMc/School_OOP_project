@@ -9,6 +9,7 @@ public class miracle_sort extends sorter {
 
     public miracle_sort(sort_array arr) {
         super(arr);
+        this.storageComplexity = "O(1)";
     }
 
     @Override

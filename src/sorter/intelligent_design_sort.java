@@ -6,6 +6,7 @@ public class intelligent_design_sort extends sorter {
 
     public intelligent_design_sort(sort_array arr) {
         super(arr);
+        this.storageComplexity = "O(1)";
     }
 
     @Override

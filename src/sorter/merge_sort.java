@@ -1,10 +1,12 @@
 package sorter;
+
 import dataclass.sort_array;
 
 public class merge_sort extends sorter {
 
     public merge_sort(sort_array arr) {
         super(arr);
+        this.storageComplexity = "O(n)";
     }
 
     @Override
@@ -20,11 +22,11 @@ public class merge_sort extends sorter {
     private void mergeSort(int[] array, int left, int right) {
         if (left < right) {
             int mid = left + (right - left) / 2;
-            
+
             // Sort first and second halves
             mergeSort(array, left, mid);
             mergeSort(array, mid + 1, right);
-            
+
             // Merge the sorted halves
             merge(array, left, mid, right);
         }
@@ -50,7 +52,7 @@ public class merge_sort extends sorter {
         // Merge the temp arrays
         int i = 0, j = 0;
         int k = left;
-        
+
         while (i < n1 && j < n2) {
             if (leftArray[i] <= rightArray[j]) {
                 array[k] = leftArray[i];

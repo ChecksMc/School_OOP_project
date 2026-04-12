@@ -6,6 +6,7 @@ public class dictator_sort extends sorter {
 
     public dictator_sort(sort_array arr) {
         super(arr);
+        this.storageComplexity = "O(1)";
     }
 
     @Override
