@@ -178,7 +178,7 @@ direction TB
     sorter <|-- bogo_sort : extends
     sorter *-- sort_array : composes
     visualizer *-- sorter : 1...*
-    visualizer *-- dataclass.sort_array : 1...*
+    visualizer *-- sort_array : 1...*
 ```
 
 
