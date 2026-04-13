@@ -409,14 +409,6 @@ java -cp bin main.main
 Hinweis zur Sounddatei:
 - Für akustische Effekte legen Sie eine `Pop.wav` (oder `Pop.mp3`) im Ordner `src/main/` ab.
 
-= Projektstärken und "Schmankerl"
-
-Besondere Merkmale:
-- GUI-basierter Visualizer mit interaktiven Karten für Algorithmen
-- Debugger-ähnliche Steuerung (Step Into / Over / Out)
-- Synchronisierte Pseudocode-Anzeige
-- Duale Speicheransicht für Algorithmen mit Hilfsarray
-- Soundeffekte zur Visualisierung von Datenbewegungen
 
 = Bekannte Einschränkungen und Plattformhinweise
 
