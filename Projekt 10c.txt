@@ -1,0 +1,46 @@
+﻿10c Abschlussprojekt OOM/OOP Informatik 10 
+
+Projektidee: 
+
+Erstellt im Team (max. 5 Personen) innerhalb von 5 Wochen ein Java-Projekt zu einem 
+selbstgewählten Thema! 
+
+Mögliche Ideen:  
+
+• Kleine Bank mit mehreren Konten und Kunden mit Abwicklung von realistischen 
+Bankgeschäften… 
+
+• Kleiner Zoo mit verschiedenen Tieren, die gefüttert und gepflegt werden müssen… 
+• Sportturnier mit verschiedenen Mannschaften, die gegeneinander antreten…… 
+• Supermarkt mit mehreren Kassen und Warteschlangen mit Kunden…. 
+• Autovermietung, Hotel, Fahrradverleih, ……. 
+• Oder eure eigene Idee! 
+
+Zeitlicher Ablauf: 
+
+Erarbeitung im Unterricht (Doppelstunde 9.03., 16.03., 23.03. und 13.04.) bzw. auch zuhause. 
+Vorstellung des Projekts am 20.04. (10 min Präsentation). 
+
+Anforderungen: 
+
+JAVA-Projekt mit  
+
+• mind. 5 Klassen 
+• 1 Feld 
+• 1 Vererbung 
+• mind. einer 1:1 Beziehung und einer 1:n Beziehung 
+• mind. 5 „anspruchsvollen“ Methoden 
+• Datenkapselung  
+• Umsetzung einer ansprechenden Projektidee 
+
+Abgabe des Java-Projekts auf Mebis bis 16.04.  
+
+Zusätzlich Erstellen eines Klassendiagramms (mit allen Attributen, Methoden und Beziehungen). 
+
+Ca. eine DINA4-Seite mit Darstellung eurer Idee, Umsetzung, Arbeitsverteilung im Team. 
+
+Vorstellen eures Projekts (Idee, Durchführung, interessante Stücke des Quellcodes, „Schmankerl“) im 
+Plenum am 20.04. 
+
+Für ein „Sehr gut“ muss euer Projekt ein besonderes „Schmankerl“ enthalten (z.B. ein GUI, eine ganz 
+besonders pfiffige Methode, Umsetzung einer besonderen Strategie, ...)
