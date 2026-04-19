@@ -87,16 +87,14 @@ public class visualizer extends JPanel {
         return Math.max(1, base * UI_SCALE);
     }
 
-    
-    
     private static void loadPopClip() {
         if (popClip != null)
             return;
         try {
-            
+
             java.net.URL soundURL = visualizer.class.getResource("/main/Pop.wav");
             if (soundURL == null) {
-                
+
                 java.io.File file = new java.io.File("src/main/Pop.wav");
                 if (file.exists()) {
                     soundURL = file.toURI().toURL();
@@ -453,7 +451,7 @@ public class visualizer extends JPanel {
         card.setHorizontalAlignment(SwingConstants.LEFT);
         card.setFocusPainted(false);
         card.setFont(new Font("SansSerif", Font.PLAIN, f(11)));
-        
+
         card.setOpaque(true);
         card.setContentAreaFilled(true);
         card.setBackground(BTN_DARK);
@@ -493,7 +491,7 @@ public class visualizer extends JPanel {
     private void styleActionButton(JButton button, Color bg) {
         button.setFocusPainted(false);
         button.setFont(new Font("SansSerif", Font.BOLD, f(12)));
-        
+
         button.setBackground(BTN_DARK);
         button.setOpaque(true);
         button.setContentAreaFilled(true);
@@ -1108,7 +1106,6 @@ public class visualizer extends JPanel {
             int rightAuxIndex = mid + 1 + j;
             int targetIndex = k;
 
-            
             playPopSound();
 
             if (leftArr[i] <= rightArr[j]) {
@@ -1304,7 +1301,7 @@ public class visualizer extends JPanel {
             codeArea.requestFocusInWindow();
             codeArea.select(start, end);
         } catch (BadLocationException e) {
-            
+
         }
     }
 
