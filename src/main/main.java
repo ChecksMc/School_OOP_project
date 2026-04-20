@@ -12,35 +12,31 @@ public class main {
 
     public static void main(String[] args) {
         try {
-            try {
-                UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception ignored) {
+            UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception ignored) {
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            JFrame frame = new JFrame("Sorting Studio");
+            frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+            Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
+            int targetWidth = s(1200);
+            int targetHeight = s(700);
+            int width = Math.min(targetWidth, Math.max(640, screen.width - 40));
+            int height = Math.min(targetHeight, Math.max(480, screen.height - 80));
+
+            frame.setMinimumSize(new Dimension(Math.max(640, width / 2), Math.max(480, height / 2)));
+            frame.setSize(new Dimension(width, height));
+            frame.setLocationRelativeTo(null);
+
+            if (targetWidth > screen.width || targetHeight > screen.height) {
+                frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
             }
 
-            SwingUtilities.invokeLater(() -> {
-                JFrame frame = new JFrame("Sorting Studio");
-                frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-
-                Dimension screen = Toolkit.getDefaultToolkit().getScreenSize();
-                int targetWidth = s(1200);
-                int targetHeight = s(700);
-                int width = Math.min(targetWidth, Math.max(640, screen.width - 40));
-                int height = Math.min(targetHeight, Math.max(480, screen.height - 80));
-
-                frame.setMinimumSize(new Dimension(Math.max(640, width / 2), Math.max(480, height / 2)));
-                frame.setSize(new Dimension(width, height));
-                frame.setLocationRelativeTo(null);
-
-                if (targetWidth > screen.width || targetHeight > screen.height) {
-                    frame.setExtendedState(JFrame.MAXIMIZED_BOTH);
-                }
-
-                frame.add(new visualizer());
-                frame.setVisible(true);
-            });
-        } catch (Exception e) {
-            System.out.println("An error occurred while initializing the application:");
-            System.out.println(e.getMessage());
-        }
+            
+            frame.add(new visualizer());
+            frame.setVisible(true);
+        });
     }
 }
